@@ -148,6 +148,10 @@ print(f"Special tokens: {tokenizer.special_tokens_map}")
 
 tokenizer.padding_side,    tokenizer.pad_token
 ```
+You can also push the tokenizer to the hub:
+```python
+tokenizer.push_to_hub ('lamm-mit/custom_GIN_Attention_tokenizer')
+```
 
 #### Create GIN model
 ```python
