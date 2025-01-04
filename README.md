@@ -47,8 +47,11 @@ Detailed examples on how to set up/train models are included below.
 Here we show how to create a GIN-Transformer model from scratch. We use the ```meta-llama/Meta-Llama-3-8B-Instruct``` model as source for basic model hyperparameters (not weights, however). 
 
 Step 1: Load dataset (necessary to train custom tokenizer)
+
 Step 2: Train tokenizer
+
 Step 3: Setup GIN-Transformer model
+
 Step 4: Train moodel
 
 ### Load dataset and train tokenizer
@@ -325,7 +328,9 @@ tokenizer.push_to_hub ()
 Here we show how to fine-tune a pre-trained Transformer model using the Sparse-GIN fine-tuning method. We use the ```meta-llama/Llama-3.2-3B-Instruct``` model as pre-trained model. 
 
 Step 1: Load dataset  
+
 Step 2: Create Sparse-GIN on top of pre-trained Llama model 
+
 Step 3: Train moodel
 
 #### Load dataset
