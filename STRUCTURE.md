@@ -145,7 +145,7 @@ The `CG_Attention_Interpolate` class extends functionality to blend local and ex
 ### Flowchart CG_Attention_Scaling
 
 ```plaintext
-Input Tokens + Local Attention + External Attention
+Input Tokens  
    ↓
 Encode with PerceiverAR_Fixed_Token_Per_Latent_Scaling.encode
    ↓
