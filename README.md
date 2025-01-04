@@ -44,6 +44,12 @@ Detailed examples on how to set up/train models are included below.
 
 ## Create a GIN-Transformer Model from Scratch
 
+Here we show how to create a GIN-Transformer model from scratch. We use the ```meta-llama/Meta-Llama-3-8B-Instruct``` model as source for basic model hyperparameters (not weights, however). 
+
+Step 1: Load dataset (necessary to train custom tokenizer)
+Step 2: Train tokenizer
+Step 3: Setup GIN-Transformer model
+Step 4: Train moodel
 
 ### Load dataset and train tokenizer
 
@@ -137,7 +143,6 @@ tokenizer.padding_side,    tokenizer.pad_token
 
 #### Create GIN model
 ```python
-
 #Load Graph-Aware Transformer library
 from xgpt import *
 
@@ -147,20 +152,16 @@ set_seed(42)
 # Load Pretrained LLaMA Configuration on which model will be based
 pretrained_model_name = 'meta-llama/Meta-Llama-3-8B-Instruct'
 
+# Adapt these parameters to whatever your choices are, e.g. change number of heads, head_dim, number of layers, etc. 
 transformer_config = LlamaConfig.from_pretrained(pretrained_model_name)
-
 transformer_config.num_attention_heads=8
 transformer_config.num_key_value_heads=transformer_config.num_attention_heads
 transformer_config.head_dim=70
-transformer_config.hidden_size=transformer_config.head_dim*transformer_config.num_attention_heads   #544
-
-transformer_config.intermediate_size=512 #4*transformer_config.hidden_size
-
+transformer_config.hidden_size=transformer_config.head_dim*transformer_config.num_attention_heads 
+transformer_config.intermediate_size=512 #ALT: 4*transformer_config.hidden_size
 transformer_config.num_hidden_layers=6
 transformer_config.torch_dtype='bfloat16'
-
 transformer_config.vocab_size=tokenizer.vocab_size
-
 transformer_config._attn_implementation='eager' 
 
 gnn_config = GNNConfig(
@@ -169,27 +170,28 @@ gnn_config = GNNConfig(
     dropout=0.1,
     lambda_GNN=1,
     norm_to_hidden_states=False,
-    use_layer_norm=False, #False,
+    use_layer_norm=False,  
     combined_norm=False,
     rms_norm_eps=1e-5,
     hidden_dim=transformer_config.hidden_size,
     learnable_aggregate_activation ='softmax', #
     gnn_mode='none',
     
+    ### Set type of GNN-Attention you want to create
     #use_GNN_from_attention='LlamaAttentionPNA',
     use_GNN_from_attention='LlamaAttentionGIN',    
 
     attention_GIN_MLP_GIN_use_softmax=True,
     attention_GIN_MLP_use_scoring_fnct=False, #standard attn
-    attention_GIN_MLP_multiplier = .5,  
+    attention_GIN_MLP_multiplier = 0.5, #1, 2, 4, ...  
     
     use_sharpening=True, sharpening_value_init='value', initial_sharpening_value=1.0,
 
-    attention_GIN_MLP_o_proj_at_end=False,#True,
+    attention_GIN_MLP_o_proj_at_end=False, 
 
     use_differential_attention = False,
 
-    ## Transformer FF MLP type
+    ### Set transformer FF MLP type
     MLP_type='standard_MLP', #'linear_MLP' 'no_MLP' 'shallow_MLP'
 )
 
@@ -197,12 +199,15 @@ model_with_gnn  = load_model_with_pretrained_transformer( gnn_config, transforme
                                 torch_dtype='bfloat16',
                                 pretrained_model_name = None, attn_implementation='eager',# 'flash_attention_2' #'eager'
                                 )
+
 # Move to appropriate device (if necessary)
 model_with_gnn.to("cuda" if torch.cuda.is_available() else "cpu")
 
 count_trainable_parameters(model_with_gnn)
 ```
 #### Train model
+
+Once we loaded the training data and created the model, we train the model, like so: 
 
 ```python
 from trl import SFTConfig, SFTTrainer
@@ -309,7 +314,19 @@ trainer = SFTTrainer(
 trainer.train()
 ```
 
+You can save/push the model like so:
+```python
+model_with_gnn.push_to_hub ('lamm-mit/GIN-Transformer-Model')
+tokenizer.push_to_hub ()
+```
+
 ## Create a Sparse-GIN Fine Tuning Model
+
+Here we show how to fine-tune a pre-trained Transformer model using the Sparse-GIN fine-tuning method. We use the ```meta-llama/Llama-3.2-3B-Instruct``` model as pre-trained model. 
+
+Step 1: Load dataset  
+Step 2: Create Sparse-GIN on top of pre-trained Llama model 
+Step 3: Train moodel
 
 #### Load dataset
 
@@ -369,42 +386,34 @@ tokenizer.pad_token,tokenizer.pad_token_id
  
 gnn_config = GNNConfig(
     num_layers=1,        
-    activation="prelu", #"prelu",
+    activation="prelu", #"relu" 
     dropout=0.1,
-
     lambda_GNN_initial = 0.,
     lambda_GNN=0.5,
-
     norm_to_hidden_states=False,
     use_layer_norm=True, 
     combined_norm=False,
-    
     rms_norm_eps=1e-5,
-    
     hidden_dim=155,
-    
-    learnable_aggregate_activation ='softmax', 
 
-    threshold = 0.1,
-    
-    adj_construction_method='sum', threshold_any_tau=.1,
-    gnn_mode='single',
-    
-    adj_transform_hidden_dim =  128,
+    ### GIN type/approach
+    gnn_type='causal_gin', 
+    gnn_mode='single', #one GIN, not separate per head
+    GIN_use_MLP = True, 
+    GIN_hidden_dim_multiplier = 1, # MLP hidden dimension in the GIN
 
-    use_distance_scaling=False,  
-    
-    continuous_transform_alpha = 10.0,
-    
-    epsilon_threshold = 0.6,
-    zero_below_epsilon_threshold = True, #True,  # New option
-    add_rope = False, #False, #True, 
-
-    gnn_type='causal_gin', remove_self_connections=False, GIN_use_MLP=True, GIN_hidden_dim_multiplier=1, GIN_use_norm=False, GIN_edge_weight_scaling=True,
+    ### Parameters for adjacency processing
+    adj_construction_method='sum', #sum all per-head adj matrices, clamped at 1.0    
+    continuous_transform_alpha = 10.0, threshold = 0.1,   
+    epsilon_threshold = 0.6, zero_below_epsilon_threshold = True, # All edges below threshold are set to zero
+    remove_self_connections = False, 
+    GIN_use_norm = False, 
+    GIN_edge_weight_scaling = True, # Scale graph edges based on adjacency matrix derived from attention weights
 
     gnn_residual = False, 
     
     plot_for_debugging=False,
+
     gnn_logic='before_MLP', #'after_MLP' 'parallel_GNN_MLP',
 )
 
@@ -434,7 +443,6 @@ count_trainable_parameters(model_with_gnn)
 ```python
 from trl import SFTConfig, SFTTrainer
 from transformers import TrainingArguments, DataCollatorForSeq2Seq, TrainerCallback
-
 
 sample_steps    = 1000
 max_seq_length  = 1024

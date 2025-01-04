@@ -42,7 +42,7 @@ class GNNConfig(PretrainedConfig):
         distance_weight_strength: float = 1.0,
         distance_scaling_method: str = 'power',
         gnn_residual: bool=True, 
-        GIN_use_MLP: bool=False,
+        GIN_use_MLP: bool=True,
         GIN_use_norm: bool=False,
         GIN_hidden_dim_multiplier: float = 2, 
         GIN_edge_weight_scaling=True,
