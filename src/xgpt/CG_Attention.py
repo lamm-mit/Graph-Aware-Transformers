@@ -16,22 +16,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from datetime import datetime
-
+import math
 from typing import Optional, Tuple
-
 from transformers.models.llama.modeling_llama import *
-
 from .CG_Attention import * 
-
-from typing import Optional, Tuple
 import matplotlib.pyplot as plt
-
 from copy import deepcopy
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from typing import Optional, Tuple
-
+#import numpy as np
 class CrossAttention(nn.Module):
     def __init__(self, dim: int, num_heads: int, head_dim: int, dropout: float = 0.1):
         super().__init__()
@@ -431,9 +422,6 @@ class PerceiverAR_Fixed_Token_Per_Latent(nn.Module):
     
     
 ### CG_Attention ####
-import torch
-import torch.nn as nn
-from typing import Optional, Tuple
 
 class CG_Attention (nn.Module):
     def __init__(self, config, layer_idx: Optional[int] = None):
@@ -541,13 +529,6 @@ class CG_Attention (nn.Module):
 ### TODO: test and debug
 ### Not tested yet, use with caution
 ####################################################################################
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import math
-from typing import Optional, Tuple
-
 class CrossAttentionPlus(nn.Module):
     def __init__(self, dim: int, num_heads: int, head_dim: int, dropout: float = 0.1, 
                  normalize_after_mixing=True,
@@ -676,10 +657,6 @@ class LatentTransformerLayerPlus(nn.Module):
         x = x + self.mlp(self.norm2(x))
         return x, adj_matrix
 
-import numpy as np
-import matplotlib.pyplot as plt
-from datetime import datetime
-
 def visualize_two_adj_matrices_torch(matrix1, matrix2):
     """
     Visualize and compare two adjacency matrices (PyTorch tensors), averaging over the `head` dimension
@@ -717,13 +694,6 @@ def visualize_two_adj_matrices_torch(matrix1, matrix2):
     file_path = f"./adj_matrix_comparison_{timestamp}.svg"
     plt.savefig(file_path, format="svg")
     plt.show()
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import math
-from typing import Optional, Tuple
- 
 
 class PerceiverAR_Fixed_Token_Per_Latent_Scaling(nn.Module):
     def __init__(self, config):
@@ -1034,11 +1004,6 @@ class PerceiverAR_Fixed_Token_Per_Latent_Scaling(nn.Module):
         '''
         return self.final_norm(output)
     
-
-import torch
-import torch.nn as nn
-from typing import Optional, Tuple
-
 class CG_Attention_Interpolate (nn.Module):
     def __init__(self, config, layer_idx: Optional[int] = None):
         super().__init__()

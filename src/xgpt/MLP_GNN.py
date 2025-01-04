@@ -4,7 +4,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers.activations import ACT2FN
-
 class LlamaMLP_HalfwayGIN(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -82,11 +81,6 @@ class LlamaMLP_HalfwayGIN(nn.Module):
         # Finish MLP with down_proj
         out = self.down_proj(h_gin_combined)  # (b, s, hidden_size)
         return out
-
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
 class LlamaMLP_MultiHop(nn.Module):
     def __init__(self, config):
@@ -187,11 +181,6 @@ class LlamaMLP_MultiHop(nn.Module):
         out = torch.cat(out_per_head, dim=1)  # (b, h, s, d)
         out = out.transpose(1, 2).contiguous().view(bsz, seq_len, self.hidden_size)
         return out
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from transformers.activations import ACT2FN
 
 class LlamaMLP_HalfwayGIN_MultiAggregration(nn.Module):
     def __init__(self, config):
