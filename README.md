@@ -25,6 +25,13 @@ cd Graph-Aware-Transformers
 pip install -e .
 ```
 
+#### Import the library for use in Python
+```python
+from xgpt import *
+```
+
+Detailed examples on how to set up/train models are included below. 
+
 ## Create a GIN-Transformer Model from Scratch
 
 
@@ -68,6 +75,8 @@ test_dataset = test_dataset.map(format_data, remove_columns=test_dataset.column_
 #### Train tokenizer
 
 ```python
+from xgpt import *
+
 # Train the tokenizer
 texts = train_dataset['text']
 tokenizer = train_tokenizer_from_scratch(texts, vocab_size=20, special_tokens = [
