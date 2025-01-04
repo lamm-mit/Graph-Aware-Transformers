@@ -4,11 +4,446 @@ We present an approach to enhancing Transformer architectures by integrating gra
 
 ## Create a GIN-Transformer Model from Scratch
 
-...
+### Load dataset and train tokenizer
 
+#### Load dataset
+```python
+from datasets import load_dataset
 
+dataset = load_dataset("lamm-mit/protein_secondary_structure_from_PDB")
+max_length=256
+
+dataset = dataset.filter(lambda example: example['Sequence_length'] < max_length)
+dataset = dataset['train'] 
+split_dataset = dataset.train_test_split(test_size=0.1, seed=42)
+
+# Access the new splits
+train_dataset = split_dataset['train']
+test_dataset = split_dataset['test']
+
+# Verify the sizes of the new datasets
+print(f"Training set size: {len(train_dataset)}")
+print(f"Test set size: {len(test_dataset)}")
+
+# Apply chat template
+def format_data(example):
+    # Apply chat template to format example text
+    fixed_prompt=example['instruction'].replace('"', "")
+    example["text"] = f"{fixed_prompt}{example['answer']}"
+
+    # Remove unwanted tokens from the text
+    unwanted_tokens = ["<|begin_of_text|>", "Use <|thinking|>.", "<|thinking|>", "<|/thinking|>"]
+    for token in unwanted_tokens:
+        example["text"] = example["text"].replace(token, "")
+
+    return {"text": example["text"]}
+
+# Apply chat template
+def format_data(example):
+    '''
+    example["text"] = tokenizer.apply_chat_template(
+        [{"role": "user", "content": example["question"]}, {"role": "assistant", "content": example["answer"]}],
+        tokenize=False, add_generation_prompt=False
+    )
+    '''
+    example["text"] =f"<|begin_of_text|><|sequence|>{example['Sequence']}<|/sequence|><|{example['Primary_SS_Type']}|><|{example['Secondary_SS_Type']}|><|eot_id|>"
+    
+    return example
+
+train_dataset = train_dataset.map(format_data,remove_columns=train_dataset.column_names)
+test_dataset = test_dataset.map(format_data, remove_columns=test_dataset.column_names)
+```
+
+#### Train tokenizer
+
+```python
+# Train the tokenizer
+texts = train_dataset['text']
+tokenizer = train_tokenizer_from_scratch(texts, vocab_size=20, special_tokens = [
+    "<|pad|>",
+    "<|eot_id|>", 
+    "<|begin_of_text|>",
+    "<|unk|>",
+    "<|mask|>",
+    "<|sequence|>",
+    "<|/sequence|>",
+    # Single-letter amino acid codes
+    "A", "R", "N", "D", "C", "E", "Q", "G", "H", "I",
+    "L", "K", "M", "F", "P", "S", "T", "W", "Y", "V",
+    # Additional special words
+    "<|AH|>", "<|BS|>", "<|UNSTRUCTURED|>", "<|BEND|>", "<|PHIHELIX|>", "<|310HELIX|>", "<|BETABRIDGE|>", "<|T|>",
+]
+)
+
+# Save the trained tokenizer
+tokenizer.save_pretrained("./custom_tokenizer")
+
+# Test with various scenarios
+test_cases = [
+    "<|begin_of_text|><|sequence|>A A A I<|/sequence|>",  # Simple space-separated
+    "<|begin_of_text|><|sequence|>AAAIAIIAJ<|/sequence|>",  # Simple space-separated
+    "Hello World!",  # With punctuation
+    "Test   Multiple   Spaces",  # Multiple spaces
+    "NoSpaces",  # No spaces
+    "123.456",  # Numbers
+    "user@email.com",  # Special characters
+    "Mixed12345Chars!@#",  # Mixed content
+]
+
+print("Testing tokenizer:")
+for test in test_cases:
+    encoded = tokenizer.encode(test, add_special_tokens=False)
+    decoded = tokenizer.decode(encoded)
+    print(f"\nOriginal: {repr(test)}")
+    print(f"Encoded : {encoded}")
+    print(f"Decoded : {repr(decoded)}")
+    
+# Print vocabulary info
+print(f"\nVocabulary size: {len(tokenizer)}")
+print(f"Special tokens: {tokenizer.special_tokens_map}")
+
+tokenizer.padding_side,    tokenizer.pad_token
+```
+
+#### Create GIN model
+```python
+from xgpt import *
+
+from transformers import set_seed
+set_seed(42)
+
+# Load Pretrained LLaMA Configuration on which model will be based
+pretrained_model_name = 'meta-llama/Meta-Llama-3-8B-Instruct'
+
+transformer_config = LlamaConfig.from_pretrained(pretrained_model_name)
+
+transformer_config.num_attention_heads=8
+transformer_config.num_key_value_heads=transformer_config.num_attention_heads
+transformer_config.head_dim=70
+transformer_config.hidden_size=transformer_config.head_dim*transformer_config.num_attention_heads   #544
+
+transformer_config.intermediate_size=512 #4*transformer_config.hidden_size
+
+transformer_config.num_hidden_layers=6
+transformer_config.torch_dtype='bfloat16'
+
+transformer_config.vocab_size=tokenizer.vocab_size
+
+transformer_config._attn_implementation='eager' 
+
+gnn_config = GNNConfig(
+    num_layers=1,        
+    activation="relu", #"prelu"
+    dropout=0.1,
+    lambda_GNN=1,
+    norm_to_hidden_states=False,
+    use_layer_norm=False, #False,
+    combined_norm=False,
+    rms_norm_eps=1e-5,
+    hidden_dim=transformer_config.hidden_size,
+    learnable_aggregate_activation ='softmax', #
+    gnn_mode='none',
+    
+    #use_GNN_from_attention='LlamaAttentionPNA',
+    use_GNN_from_attention='LlamaAttentionGIN',
+    
+    attention_GIN_MLP_o_proj_at_end=False,#True,
+    LlamaAttentionHierarchicalVariant_2_PerceiverAR_use_skip=True,
+    MLP_type='standard_MLP', #'linear_MLP' 'no_MLP' 'shallow_MLP'
+    attention_GIN_MLP_GIN_use_softmax=True,
+    attention_GIN_MLP_use_scoring_fnct=False, #standard attn
+    
+    attention_GIN_MLP_GIN_threshold_value=0.,
+    attention_GIN_MLP_GIN_learnable_threshold=False,
+    
+    attention_GIN_MLP_separate_attention=False, 
+    
+    attention_epsilon_strategy = "uniform", attention_epsilon_uniform_value =   1.,
+    residual_epsilon_strategy = "uniform", residual_epsilon_uniform_value =0.05,
+    attention_GIN_MLP_multiplier = .5,  
+    use_sharpening=True,  
+    sharpening_value_init='value', initial_sharpening_value=1.0,
+
+    use_differential_attention = False,
+    use_layer_norm_in_GIN_MLP=True,
+     
+    N_GNN_from_attention_layers=1,    
+)
+
+model_with_gnn  = load_model_with_pretrained_transformer( gnn_config, transformer_config, 
+                                torch_dtype='bfloat16',
+                                pretrained_model_name = None, attn_implementation='eager',# 'flash_attention_2' #'eager'
+                                )
+# Move to appropriate device (if necessary)
+model_with_gnn.to("cuda" if torch.cuda.is_available() else "cpu")
+
+count_trainable_parameters(model_with_gnn)
+```
+#### Train model
+
+```python
+from trl import SFTConfig, SFTTrainer
+from transformers import TrainingArguments, DataCollatorForSeq2Seq, TrainerCallback
+
+sample_steps    = 100
+max_seq_length  = 300
+
+class SampleGenerationCallback(TrainerCallback):
+    def __init__(self, model, tokenizer, prompts, max_tokens, temperature, sample_steps, test_dataset):
+        self.model = model
+        self.tokenizer = tokenizer
+        self.prompts = prompts
+        self.max_tokens = max_tokens
+        self.temperature = temperature
+        self.sample_steps = sample_steps
+        self.test_dataset = test_dataset
+        self.perplexity_scores = []
+        self.test_scores = []
+        self.trainable_scale_history = []
+        self.loss_fct = CrossEntropyLoss(reduction='none')  # Changed to 'none' for per-token loss
+
+    def on_step_end(self, args, state, control,
+                    log_trainable_scale_values=True,
+                    **kwargs):
+        if state.global_step % self.sample_steps == 0:
+            print(f"\n[Sample Generation at Step {state.global_step}]")
+            for item in self.prompts:
+                res=perform_inference(self.model, self.tokenizer, 
+                                  prompt=item, 
+                                  max_tokens=self.max_tokens, 
+                                  temperature=self.temperature)[0]
+                print ("QUESTION: ", item)
+                print ("RESPONSE: ", res)
+                
+            try:
+                # Log trainable_scale values
+                if log_trainable_scale_values:
+                    layer_scales = []
+                    total_scale = 0
+                    num_layers = len(self.model.model.layers)
+    
+                    for layer_idx, layer in enumerate(self.model.model.layers):
+                        trainable_scale_value = layer.trainable_scale.item()
+                        layer_scales.append(trainable_scale_value)
+                        total_scale += trainable_scale_value
+    
+                    average_trainable_scale = total_scale / num_layers
+                    self.trainable_scale_history.append((state.global_step, layer_scales, average_trainable_scale))
+                    print(f"Average trainable_scale at step {state.global_step}: {average_trainable_scale}")
+            except:
+                print ()
+
+sample_generation_callback = SampleGenerationCallback(
+    model=model_with_gnn,
+    tokenizer=tokenizer,
+    prompts=[
+             test_dataset['text'][0][:-60],
+             test_dataset['text'][10][:-60]
+            ],
+    max_tokens=128,
+    temperature=0.1,
+    sample_steps=sample_steps,
+    test_dataset=test_dataset,    
+)
+
+# Training arguments and initialization remain the same
+training_args = SFTConfig(
+    output_dir="./results_output,
+    eval_strategy="steps",
+    eval_steps=sample_steps,
+    learning_rate=1e-4, #1e-4,
+    per_device_train_batch_size=8,
+    per_device_eval_batch_size=4,
+    gradient_accumulation_steps=4,
+    num_train_epochs=9,
+    weight_decay=0.01,
+    logging_dir="./logs_output",
+    lr_scheduler_type="constant", #'cosine'
+    max_seq_length=max_seq_length,
+    logging_steps=sample_steps,
+    warmup_steps=250,
+    dataset_text_field="text",
+    packing=False,
+    max_grad_norm=1,
+    report_to='none',
+    save_strategy='no', #'epoch',
+    do_eval=True,
+)
+
+trainer = SFTTrainer(
+    model=model_with_gnn,
+    args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=test_dataset,
+    tokenizer=tokenizer,
+    callbacks=[sample_generation_callback],
+)
+
+# Train
+trainer.train()
+```
 
 ## Create a Sparse-GIN Fine Tuning Model
 
-....
+#### Load dataset
 
+```python
+from datasets import load_dataset
+
+dataset = load_dataset("mlabonne/orca-math-word-problems-80k")
+dataset = dataset['train']
+
+split_dataset = dataset.train_test_split(test_size=0.1, seed=42)
+
+# Access the new splits
+train_dataset = split_dataset['train']
+test_dataset = split_dataset['test']
+ 
+# Apply chat template
+def format_data(example):
+    '''
+    example["text"] = tokenizer.apply_chat_template(
+        [{"role": "user", "content": example["question"]}, {"role": "assistant", "content": example["answer"]}],
+        tokenize=False, add_generation_prompt=False
+    )
+    '''
+    example["text"] =f"### User: {example['question']}<|eot_id|>### Assistant: {example['answer']}<|eot_id|>" 
+    
+    return example
+ 
+columns_to_remove = [col for col in train_dataset.column_names if col != "text"]
+
+train_dataset = train_dataset.map(format_data, remove_columns=columns_to_remove)
+test_dataset = test_dataset.map(format_data, remove_columns=columns_to_remove)
+
+# Verify the sizes of the new datasets
+print(f"Training set size: {len(train_dataset)}")
+print(f"Test set size: {len(test_dataset)}")
+```
+
+#### Create Sparse-GIN model on top of pre-trained LLM
+
+```python
+from xgpt import *
+from transformers import LlamaConfig, LlamaForCausalLM, LlamaTokenizerFast
+
+pretrained_model_name = "meta-llama/Llama-3.2-3B-Instruct"
+
+transformer_config = LlamaConfig.from_pretrained(pretrained_model_name)
+
+tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name)
+
+tokenizer.padding_side='right'
+tokenizer.pad_token = "<|finetune_right_pad_id|>"# tokenizer.eos_token
+tokenizer.pad_token,tokenizer.pad_token_id
+
+# Define Sparse-GIN Configuration  
+ 
+gnn_config = GNNConfig(
+    num_layers=1,        
+    activation="prelu", #"prelu",
+    dropout=0.1,
+
+    lambda_GNN_initial = 0.,
+    lambda_GNN=0.5,
+
+    norm_to_hidden_states=False,
+    use_layer_norm=True, 
+    combined_norm=False,
+    
+    rms_norm_eps=1e-5,
+    
+    hidden_dim=155,
+    
+    learnable_aggregate_activation ='softmax', 
+
+    threshold = 0.1,
+    
+    adj_construction_method='sum', threshold_any_tau=.1,
+    gnn_mode='single',
+    
+    adj_transform_hidden_dim =  128,
+
+    use_distance_scaling=False,  
+    
+    continuous_transform_alpha = 10.0,
+    
+    epsilon_threshold = 0.6,
+    zero_below_epsilon_threshold = True, #True,  # New option
+    add_rope = False, #False, #True, 
+
+    gnn_type='causal_gin', remove_self_connections=False, GIN_use_MLP=True, GIN_hidden_dim_multiplier=1, GIN_use_norm=False, GIN_edge_weight_scaling=True,
+
+    gnn_residual = False, 
+    
+    plot_for_debugging=False,
+    gnn_logic='before_MLP', #'after_MLP' 'parallel_GNN_MLP',
+)
+
+transformer_config._attn_implementation='eager' 
+
+model_with_gnn  = load_model_with_pretrained_transformer ( gnn_config, transformer_config, 
+                               pretrained_model_name = pretrained_model_name,
+                               attn_implementation='eager',
+                               )
+count_trainable_parameters(model_with_gnn)
+
+# Move to appropriate device (if necessary)
+model_with_gnn.to("cuda" if torch.cuda.is_available() else "cpu")
+ 
+transformer_config = LlamaConfig.from_pretrained(pretrained_model_name)
+
+freeze_except_select(model_with_gnn, unfreeze_keywords=['gnn', 
+                                                        'trainable_scale',
+                                                        'gnn_norm',
+                                                        'combined_norm'
+                                                       ], 
+                                                       verbose=True)
+
+count_trainable_parameters(model_with_gnn)
+
+#### Training
+```python
+from trl import SFTConfig, SFTTrainer
+from transformers import TrainingArguments, DataCollatorForSeq2Seq, TrainerCallback
+
+
+sample_steps    = 1000
+max_seq_length  = 1024
+
+# Training arguments and initialization remain the same
+training_args = SFTConfig(
+    output_dir="./output_dir/",
+    eval_strategy="epoch", #"steps",
+    eval_steps=sample_steps,
+    learning_rate=2e-4, 
+    per_device_train_batch_size=1,
+    per_device_eval_batch_size=2,
+    gradient_accumulation_steps=4,
+    num_train_epochs=3,
+    weight_decay=0.01,
+    logging_dir="./logging_dir/",
+    lr_scheduler_type="constant", #"cosine"
+    max_seq_length=max_seq_length,
+    logging_steps=sample_steps,
+    warmup_steps=50,
+    dataset_text_field="text",
+    packing=False,
+    max_grad_norm=0.5,
+    report_to='none',
+    save_strategy='no',
+    do_eval=True,
+)
+
+trainer = SFTTrainer(
+    model=model_with_gnn,
+    args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=test_dataset,
+    tokenizer=tokenizer,
+    #callbacks=[sample_generation_callback],
+)
+
+# Train
+trainer.train()
+```

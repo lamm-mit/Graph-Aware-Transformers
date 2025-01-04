@@ -17,7 +17,7 @@ class GNNConfig(PretrainedConfig):
         scalers: list = None,
         degree: list = None,
         norm_to_hidden_states: bool = False,
-        remove_self_connections: bool = True,
+        remove_self_connections: bool = False,
 
         continuous_transform_alpha: float = 10.0,
         zero_below_epsilon_threshold: bool = True,
@@ -75,7 +75,7 @@ class GNNConfig(PretrainedConfig):
         LlamaAttentionHierarchicalVariant_2_PerceiverAR_use_skip: bool = True,
         group_tokens_for_coarse_graining: bool = False,
         mix_weights_initial: float=0.5,
-        use_projection: bool = True,
+        use_projection: bool = False,
         attention_GIN_MLP_o_proj_at_end: bool = False,
 
         use_layer_norm_in_GIN_MLP: bool=False,
@@ -103,8 +103,8 @@ class GNNConfig(PretrainedConfig):
         attention_GIN_MLP_attention_mix_mode: str ='A', 
         attention_GIN_MLP_separate_attention: bool=False,
         attention_GIN_MLP_scoring_hidden_dim: int = 512,
-        attention_GIN_MLP_use_scoring_fnct: bool= True, # True, use MLP scoring, False= standart attention
-        attention_GIN_MLP_GIN_use_softmax: bool = False, #no softmax standard 
+        attention_GIN_MLP_use_scoring_fnct: bool= False, # True, use learnable MLP scoring, False= standard attention
+        attention_GIN_MLP_GIN_use_softmax: bool = True,  
         attention_GIN_MLP_GIN_softmax_temperature: float =1., 
         attention_GIN_MLP_GIN_MLP_pre_aggregate: bool=True, 
         attention_GIN_MLP_GIN_fuse_mode: str='epsilon',

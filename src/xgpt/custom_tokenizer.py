@@ -1,6 +1,5 @@
 # custom_tokenizer.py
 
-import os
 from pathlib import Path
 from typing import List, Optional, Union
 from transformers import LlamaTokenizerFast
@@ -274,7 +273,6 @@ def train_tokenizer_from_scratch_NFKC(
 # tokenizer = train_tokenizer_from_scratch_NFKC(texts, vocab_size=128)
 # encoded = tokenizer("Test <|sequence|> data <|/sequence|>", return_tensors="pt")
 # print(encoded)
-
 
 def plot_token_length_histogram(dataset, tokenizer):
     # Calculate token lengths for each example in the dataset
