@@ -506,14 +506,6 @@ Figure 4: Trainable scale parameter over all layers in the model, plotted over a
 
 A trained model can be found here [lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-orca-math-word-problems](https://huggingface.co/lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-orca-math-word-problems).
 
-Additional datasets:
-
-1) [lamm-mit/SAGI-1-SYMBOLIC_DATA_PLUS_REASONING_DATA_V1](https://huggingface.co/datasets/lamm-mit/SAGI-1-SYMBOLIC_DATA_PLUS_REASONING_DATA_V1)
-2) [lamm-mit/UniRef50_512_all](https://huggingface.co/datasets/lamm-mit/UniRef50_512_all)
-3) [lamm-mit/UniRef50_512_5M](https://huggingface.co/datasets/lamm-mit/UniRef50_512_5M)
-4) [lamm-mit/UniRef50_512_500K](https://huggingface.co/datasets/lamm-mit/UniRef50_512_500K)
-5) [lamm-mit/music21_logic_dataset](https://huggingface.co/datasets/lamm-mit/music21_logic_dataset/settings)
-
 ## Reference
 
 ```bibtex
