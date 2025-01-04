@@ -237,6 +237,7 @@ class ShallowLlamaMLP (nn.Module):
         return proj
 
 
+### Main class: The LlamaDecoderLayerWithGNN layer that incorporates the various GNN flavors
 class LlamaDecoderLayerWithGNN(nn.Module):
     def __init__(self, config, layer_idx):
         super().__init__()
@@ -245,13 +246,12 @@ class LlamaDecoderLayerWithGNN(nn.Module):
         self.head_dim = config.hidden_size // config.num_attention_heads
         self.gnn_config = config.gnn_config
         self.layer_idx = layer_idx
-
     
         # Initialize self-attention layers based on the configuration
-        if self.gnn_config.use_GNN_from_attention in ['LlamaAttention_Original',
-                                                      'LlamaAttentionGIN',
-                                                      'LlamaAttentionPNA',
-                                                      'LlamaAttentionPNA_LM',
+        if self.gnn_config.use_GNN_from_attention in ['LlamaAttention_Original', # original Llama attention (fallback option yields similar behavior, albeit using the LLAMA_ATTENTION_CLASSES functio from the original code)
+                                                      'LlamaAttentionGIN', # GIN-Attention
+                                                      'LlamaAttentionPNA', # PNA-Attention
+                                                      'LlamaAttentionPNA_LM', #PNA_LM-Attention, a variant of PNA
                                                       ]:
             
             if self.gnn_config.use_GNN_from_attention == 'LlamaAttentionGIN':  
@@ -271,7 +271,7 @@ class LlamaDecoderLayerWithGNN(nn.Module):
             self.self_attn = LLAMA_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
 
         ######## Initialize MLP based on the configuration #######         
-        self.skip_around_MLP = True #usually use skip around MLP, except for some MLP choices
+        self.skip_around_MLP = True # Usually we use skip around MLP, except for some MLP choices
         if self.gnn_config.MLP_type == 'linear_MLP':
             self.mlp= LlamaSimpleMLP(config)
             print ("Linear/simple MLP")
@@ -282,16 +282,16 @@ class LlamaDecoderLayerWithGNN(nn.Module):
             self.mlp = ShallowLlamaMLP(config)
         elif self.gnn_config.MLP_type == 'no_MLP':
             self.mlp = nn.Identity()
-            self.skip_around_MLP = False #No MLP
+            self.skip_around_MLP = False # No MLP means no skip connection
             print ("No MLP, also removed skip connection.")
         ######## Initialize MLP based on the configuration #######         
 
-        ######## MLP-GIN OPTIONS ############
+        ######## MLP-GIN OPTIONS: Additional aggregrations before FF MLP layer ############
         elif self.gnn_config.MLP_type == 'LlamaMLP_HalfwayGIN':
             self.mlp = LlamaMLP_HalfwayGIN(config)
         elif self.gnn_config.MLP_type == 'LlamaMLP_HalfwayGIN_MultiHop':
             self.mlp = LlamaMLP_MultiHop(config)
-            print ("LlamaMLP_MultiHop, does GIN inside MLP, A, A2, A3, multi-hope.")
+            print ("LlamaMLP_MultiHop, does GIN inside MLP, A, A2, A3, multi-hop.")
         elif self.gnn_config.MLP_type == 'LlamaMLP_HalfwayGIN_MultiAggregration':
             self.mlp = LlamaMLP_HalfwayGIN_MultiAggregration(config)
             print ("LlamaMLP_HalfwayGIN_MultiAggregration, multiple aggregators.")

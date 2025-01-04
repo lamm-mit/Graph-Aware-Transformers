@@ -191,7 +191,7 @@ gnn_config = GNNConfig(
 
     use_differential_attention = False,
 
-    ### Set transformer FF MLP type
+    ### Set transformer FF MLP type - here you can change the transformer FF type if needed
     MLP_type='standard_MLP', #'linear_MLP' 'no_MLP' 'shallow_MLP'
 )
 

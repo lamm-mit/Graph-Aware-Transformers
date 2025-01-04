@@ -7,3 +7,4 @@ from .llama_model_with_gnn import *
 from .utils import *
 from .custom_tokenizer import *
 from .Attention_GNN import *
+from .MLP_GNN import *
