@@ -35,8 +35,8 @@ class GNNConfig(PretrainedConfig):
         threshold_any_tau: float = 10., 
         top_k: int = 8,
         learnable_aggregate_activation: str = 'softmax', #'softmax' or 'sigmoid'
-        adj_transform_hidden_dim: int = 128, #adj_transform_hidden_dim
-        gnn_mode: str ='single',         # New parameter
+        adj_transform_hidden_dim: int = 128,  
+        gnn_mode: str ='none',         # Sparse GNN mode for fine-tuning
         per_head_ff: bool = False,
         use_distance_scaling: bool = False,
         distance_weight_strength: float = 1.0,
@@ -85,7 +85,6 @@ class GNNConfig(PretrainedConfig):
         
         num_latent_layers: int=4,
         num_latents: int=32,
-        
 
         hierarchical_enc_dec_type:str = 'PerceiverAR',
         num_latents_list: list=[64, 32, 8],
@@ -112,11 +111,9 @@ class GNNConfig(PretrainedConfig):
         attention_GIN_MLP_GIN_sharp_softplus_beta: float = 10.,
         attention_GIN_MLP_GIN_mode: str = 'default', 
         
-        
         GIN_after_attention: bool = True,
         GIN_after_attention_pre_GIN_norm: bool = True,
         GIN_after_attention_skip:bool = True,
-        
                 
         attention_GIN_MLP_use_second_order: bool = False,
         attention_GIN_MLP_second_order_factor: float = 0.1, 

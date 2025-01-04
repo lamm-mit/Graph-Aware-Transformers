@@ -104,7 +104,7 @@ def load_model_with_pretrained_transformer(gnn_config, transformer_config,
                       pretrained_model_name = None,device='cuda',
                       torch_dtype='bfloat16',
                       attn_implementation="flash_attention_2",
-                       ):
+                    ):
     
     # Define Pretrained Model Name
     
@@ -170,207 +170,8 @@ def load_model_with_pretrained_transformer(gnn_config, transformer_config,
         else:
             print("All parameters match between the models.")
 
-    return model_with_gnn#, pretrained_model_name
-
-#####################
-class SampleGenerationCallback(TrainerCallback):
-    def __init__(self, model, tokenizer, prompts, max_tokens, temperature, sample_steps, test_dataset):
-        self.model = model
-        self.tokenizer = tokenizer
-        self.prompts = prompts
-        self.max_tokens = max_tokens
-        self.temperature = temperature
-        self.sample_steps = sample_steps
-        self.test_dataset = test_dataset
-        self.perplexity_scores = []
-        self.test_scores = []
-        self.trainable_scale_history = []
-        self.loss_fct = CrossEntropyLoss(reduction='none')  # Changed to 'none' for per-token loss
-
-    def calculate_perplexity(self, dataset):
-        self.model.eval()
-        total_loss = 0.0
-        total_tokens = 0
-    
-        with torch.no_grad():
-            for batch in dataset:
-                # Tokenize and move to device
-                inputs = self.tokenizer(batch["text"], 
-                                      return_tensors="pt", 
-                                      padding=True, 
-                                      max_length=max_seq_length,
-                                      truncation=True)
-                inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
-                
-                # Get model outputs without labels to ensure logits
-                try:
-                    outputs = self.model(**inputs, output_hidden_states=True, return_dict=True)
-                    
-                    # Check if logits are available
-                    if not hasattr(outputs, 'logits'):
-                        print("Model output doesn't contain logits. Output keys:", outputs.keys())
-                        continue
-                        
-                    logits = outputs.logits  # [batch_size, seq_len, vocab_size]
-                    
-                    # Verify logits shape
-                    expected_vocab_size = self.model.config.vocab_size
-                    if logits.size(-1) != expected_vocab_size:
-                        print(f"Unexpected logits shape. Expected vocab size: {expected_vocab_size}, got: {logits.size(-1)}")
-                        continue
-                    
-                    # Rest of your perplexity calculation...
-                    shift_logits = logits[..., :-1, :].contiguous()
-                    shift_labels = inputs["input_ids"][..., 1:].contiguous()
-                    attention_mask = (shift_labels != self.tokenizer.pad_token_id).float()
-                    
-                    loss_fct = torch.nn.CrossEntropyLoss(reduction='none')
-                    loss = loss_fct(
-                        shift_logits.view(-1, shift_logits.size(-1)),
-                        shift_labels.view(-1)
-                    )
-                    
-                    loss = loss.view(shift_labels.size())
-                    masked_loss = (loss * attention_mask).sum()
-                    num_tokens = attention_mask.sum()
-                    
-                    total_loss += masked_loss.item()
-                    total_tokens += num_tokens.item()
-                    
-                except Exception as e:
-                    print(f"Error in perplexity calculation: {str(e)}")
-                    print(f"Model output type: {type(outputs)}")
-                    if hasattr(outputs, 'keys'):
-                        print(f"Available keys: {outputs.keys()}")
-                    continue
-    
-        self.model.train()
-        
-        if total_tokens == 0:
-            print("Warning: No valid tokens found for perplexity calculation")
-            return float('inf')
-            
-        avg_loss = total_loss / total_tokens
-        perplexity = torch.exp(torch.tensor(avg_loss)).item()
-        
-        return perplexity
-    def on_step_end(self, args, state, control,
-                    log_trainable_scale_values=True,
-                    **kwargs):
-        # Check if the current step is a multiple of sample_steps
-        if state.global_step % self.sample_steps == 0:
-            print(f"\n[Sample Generation at Step {state.global_step}]")
-            for item in self.prompts:
-                res=perform_inference(self.model, self.tokenizer, 
-                                  prompt=item, 
-                                  max_tokens=self.max_tokens, 
-                                  temperature=self.temperature)[0]
-                print ("QUESTION: ", item)
-                print ("RESPONSE: ", res)
-            # Calculate and log perplexity on the test set
-            test_perplexity = self.calculate_perplexity(self.test_dataset)
-            self.perplexity_scores.append((state.global_step, test_perplexity))
-            print(f"Test Perplexity at step {state.global_step}: {test_perplexity}")
-
-            try:
-                #BENCHMARK
-                #_, score = benchmark_llm(model_with_gnn, tokenizer, dataset_name='lamm-mit/bioinspired-benchmark',   max_tokens=1, verbatim=False,)
-                score = -1.
-            except:
-                score = -1.
-            self.test_scores.append ((state.global_step, score))
-            
-            try:
-                # Log trainable_scale values
-                if log_trainable_scale_values:
-                    layer_scales = []
-                    total_scale = 0
-                    num_layers = len(self.model.model.layers)
-    
-                    for layer_idx, layer in enumerate(self.model.model.layers):
-                        trainable_scale_value = layer.trainable_scale.item()
-                        layer_scales.append(trainable_scale_value)
-                        total_scale += trainable_scale_value
-    
-                    average_trainable_scale = total_scale / num_layers
-                    self.trainable_scale_history.append((state.global_step, layer_scales, average_trainable_scale))
-                    print(f"Average trainable_scale at step {state.global_step}: {average_trainable_scale}")
-            except:
-                print ()
-
-    def on_train_end(self, args, state, control, **kwargs):
-        # Plot perplexity over evaluation steps
-        steps, perplexities = zip(*self.perplexity_scores)
-        plt.figure(figsize=(10, 6))
-        plt.plot(steps, perplexities, marker='o', linestyle='-')
-        plt.xlabel("Training Step")
-        plt.ylabel("Perplexity")
-        plt.title("Test Perplexity Over Training Steps")
-
-        # Save perplexity plot as SVG with a timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"test_perplexity_over_steps_{timestamp}.svg"
-        plt.savefig(filename, format="svg")
-        plt.show()
-        print(f"Perplexity plot saved as {filename}")
-        
-        # Plot test scores over evaluation steps
-        steps, test_scores = zip(*self.test_scores)
-        plt.figure(figsize=(10, 6))
-        plt.plot(steps, test_scores, marker='o', linestyle='-')
-        plt.xlabel("Training Step")
-        plt.ylabel("Test score")
-        plt.title("Test Score Over Training Steps")
-
-        # Save perplexity plot as SVG with a timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"test_score_over_steps_{timestamp}.svg"
-        plt.savefig(filename, format="svg")
-        plt.show()
-        print(f"Test score plot saved as {filename}")
-
-        
-        try:
-            # Plot average trainable_scale over time
-            steps, _, avg_scales = zip(*self.trainable_scale_history)
-            plt.figure(figsize=(10, 6))
-            plt.plot(steps, avg_scales, marker='o', linestyle='-')
-            plt.xlabel("Training Step")
-            plt.ylabel("Average Trainable Scale")
-            plt.title("Average Trainable Scale Over Training Steps")
-            
-            # Save average trainable scale plot
-            avg_filename = f"average_trainable_scale_over_steps_{timestamp}.svg"
-            plt.savefig(avg_filename, format="svg")
-            plt.show()
-            print(f"Average trainable scale plot saved as {avg_filename}")
-        
-            # Plot trainable_scale for each layer over time in one plot
-            num_layers = len(self.model.model.layers)
-            plt.figure(figsize=(10, 6))
-        
-            # Generate colors for each layer using a colormap
-            colors = plt.cm.coolwarm(np.linspace(0, 1, num_layers))
-        
-            for layer_idx in range(num_layers):
-                layer_scales = [scales[layer_idx] for _, scales, _ in self.trainable_scale_history]
-                plt.plot(steps, layer_scales, marker='o', linestyle='-', color=colors[layer_idx], label=f"Layer {layer_idx + 1}")
-            
-            plt.xlabel("Training Step")
-            plt.ylabel("Trainable Scale")
-            plt.title("Trainable Scale for Each Layer Over Training Steps")
-            plt.legend(loc='upper right', title="Layers")
-        
-            # Save combined layer trainable scale plot
-            combined_filename = f"trainable_scale_all_layers_over_steps_{timestamp}.svg"
-            plt.savefig(combined_filename, format="svg")
-            plt.show()
-            print(f"Combined trainable scale plot for all layers saved as {combined_filename}")
-
-        except Exception as e:
-            print(f"An error occurred: {e}")
-
-####### PLOTTING FUNCTIONS ########
+    return model_with_gnn 
+ 
 import matplotlib.cm as cm
 import numpy as np
 
@@ -494,8 +295,6 @@ def plot_gnn_parameters_vertical_with_layer_connections_and_ylabels(model_with_g
     plt.show()
     print(f"Plot saved to {filename}")
 
-
-
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
@@ -547,8 +346,6 @@ def plot_loss_over_epochs(trainer, num_epochs=5):
 
     return normalized_train_epochs, train_loss, normalized_val_epochs, val_loss
 
-
-
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
@@ -571,8 +368,6 @@ def plot_average_loss_per_epoch(data, num_epochs=5):
 
     # Normalize steps to epochs
     max_step = max(train_steps[-1], val_steps[-1])
-    train_epochs = np.array(train_steps) / max_step * num_epochs
-    val_epochs = np.array(val_steps) / max_step * num_epochs
 
     # Calculate average loss per epoch
     train_avg_loss = []
@@ -611,7 +406,6 @@ def plot_average_loss_per_epoch(data, num_epochs=5):
 
     return train_avg_loss, val_avg_loss
 
-
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
@@ -634,8 +428,6 @@ def plot_average_loss_per_epoch(trainer, num_epochs=5):
 
     # Normalize steps to epochs
     max_step = max(train_steps[-1], val_steps[-1])
-    train_epochs = np.array(train_steps) / max_step * num_epochs
-    val_epochs = np.array(val_steps) / max_step * num_epochs
 
     # Calculate average loss per epoch
     train_avg_loss = []
