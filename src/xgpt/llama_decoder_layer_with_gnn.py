@@ -252,8 +252,8 @@ class LlamaDecoderLayerWithGNN(nn.Module):
                                                       'LlamaAttentionGIN', # GIN-Attention
                                                       'LlamaAttentionPNA', # PNA-Attention
                                                       'LlamaAttentionPNA_LM', #PNA_LM-Attention, a variant of PNA
-                                                      'CG_Attention', # CG-Attention (CG to latent space, GNN in latent space, decode to sequence space)
-                                                      'CG_Attention_Interpolate', # CG-Attention with interpolation (compute adjacency matrix in latent space, then upscale via interpolation, and GNN in sequence space)
+                                                      'CG_Attention', # CG-Attention (CG to latent space, GNN in latent space, decode to sequence space) - uses PerceiverAR_Fixed_Token_Per_Latent
+                                                      'CG_Attention_Interpolate', # CG-Attention with interpolation (compute adjacency matrix in latent space, then upscale via interpolation, and GNN in sequence space) - uses PerceiverAR_Fixed_Token_Per_Latent_Scaling
                                                       ]:
             
             if self.gnn_config.use_GNN_from_attention == 'LlamaAttentionGIN':  
@@ -265,6 +265,12 @@ class LlamaDecoderLayerWithGNN(nn.Module):
             elif self.gnn_config.use_GNN_from_attention == 'LlamaAttentionPNA_LM': 
                 self.self_attn = LlamaAttentionPNA_LM(config=config, layer_idx=layer_idx)
                 
+            elif self.gnn_config.use_GNN_from_attention == 'CG_Attention': 
+                self.self_attn = CG_Attention(config=config, layer_idx=layer_idx)
+
+            elif self.gnn_config.use_GNN_from_attention == 'CG_Attention_Interpolate': 
+                self.self_attn = CG_Attention_Interpolate(config=config, layer_idx=layer_idx)
+
             elif self.gnn_config.use_GNN_from_attention == 'LlamaAttention_Original':
                 self.self_attn = LlamaAttention_Original(config=config, layer_idx=layer_idx)
 
