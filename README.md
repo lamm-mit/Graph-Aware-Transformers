@@ -2,6 +2,12 @@
 
 We present an approach to enhancing Transformer architectures by integrating graph-aware relational reasoning into their attention mechanisms. Building on the inherent connection between attention and graph theory, we reformulate the Transformer’s attention mechanism as a graph operation and propose Graph-Aware Isomorphic Attention. This method leverages advanced graph modeling strategies, including Graph Isomorphism Networks (GIN) and Principal Neighborhood Aggregation (PNA), to enrich the representation of relational structures. Our approach improves the model’s ability to capture complex dependencies and generalize across tasks, as evidenced by a reduced generalization gap and improved learning performance. Additionally, we expand the concept of graph-aware attention to introduce Sparse GIN-Attention, a fine-tuning approach that employs sparse GINs. By interpreting attention matrices as sparse adjacency graphs, this technique enhances the adaptability of pre-trained foundational models with minimal computational overhead, endowing them with graph-aware capabilities. Across our experiments, our results demonstrate that graph-aware attention mechanisms outperform traditional attention in both training efficiency and validation performance. Furthermore, sparse GIN fine-tuning achieves improved training dynamics and better generalization compared to conventional methods like LoRA. These insights not only bridge graph theory and Transformer architectures but also uncover latent graph-like structures within traditional attention mechanisms, offering a new lens through which Transformers can be understood and optimized. By evolving Transformers as hierarchical GIN models, we reveal their implicit capacity for graph-level relational reasoning. This perspective suggests profound implications for foundational model development, enabling the design of architectures that dynamically adapt to both local and global dependencies. Applications in bioinformatics, materials science, language modeling, and beyond could benefit from this synthesis of relational and sequential data modeling, setting the stage for interpretable and generalizable modeling strategies.
 
+![image](https://github.com/user-attachments/assets/02c9b587-73f0-4293-84f8-574bc2e9018c)
+Figure 1: Eecoder-only transformer architecture (panel A), adapted here by using a GNN-based self-attention mechanism with a graph neural network. As another variant (panel B) suitable for fine-tuning a pre-trained model akin to a LoRA model, we introduce Sparse-GIN, an option where we retain the adjacency matrix predicted by the pretrained model but instead use it to construct a sparse adjacency matrix.
+
+![image](https://github.com/user-attachments/assets/5c15d37d-c693-453d-822a-97a36d4c9b8b)
+Figure 2: Visualization of adjacency matrices and interpretation of corresponding causal graphs. Panel A: Visual representation of an adjacency matrix for one specific layer and one head, extracted from a pretrained model. Panel B, left shows a large-scale adjacency matrix, where interaction strengths are color-coded, with annotations highlighting specific points of interest. Panel B, right displays the corresponding causal graph, illustrating directional relationships between nodes based on the adjacency matrix.  These visualizations provide insights into the structural and causal relationships encoded in the adjacency matrices.
+
 ## Installation
 
 #### Install PyTorch first
@@ -319,6 +325,9 @@ You can save/push the model like so:
 model_with_gnn.push_to_hub ('lamm-mit/GIN-Transformer-Model')
 tokenizer.push_to_hub ()
 ```
+![image](https://github.com/user-attachments/assets/42c3c673-58e6-4595-b4f6-4e94641d7431)
+
+Figure 3: Construction of the GIN-Attention mechanism. The flowchart shows how input embeddings in the hidden states in each layer in the  transformer via self-attention are used to construct the attention matrix. The output is processed further before aggregation and GIN-MLP application. 
 
 ## Create a Sparse-GIN Fine Tuning Model
 
@@ -483,6 +492,10 @@ trainer = SFTTrainer(
 # Train
 trainer.train()
 ```
+![image](https://github.com/user-attachments/assets/ba3ed75f-949f-4638-bcd8-f2474e6e3df4)
+
+Figure 4: Trainable scale parameter over all layers in the model, plotted over all epochs, for the Sparse-GIN model. The trainable scale parameter delineates the relative importance of the sparse GIN as it is added to the original signal. The plot illustrates how the scale parameter evolves over both the layer index and the epoch fraction. Early in training, higher layers exhibit stronger scaling values, indicating a higher reliance on sparse GIN adjustments. As training progresses, the scaling values stabilize, suggesting convergence in the relative importance of the sparse GIN contributions across layers. The color gradient reflects the magnitude of the scale parameter, with warmer colors (red) indicating higher values and cooler colors (blue) indicating lower values. This visualization provides insights into the adaptive behavior of the trainable scale parameter over the course of training.
+
 #### Model weights and other datasets
 
 A trained model can be found here [lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-orca-math-word-problems](https://huggingface.co/lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-orca-math-word-problems).
