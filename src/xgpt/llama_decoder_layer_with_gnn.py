@@ -236,7 +236,6 @@ class ShallowLlamaMLP (nn.Module):
 
         return proj
 
-
 ### Main class: The LlamaDecoderLayerWithGNN layer that incorporates the various GNN flavors
 class LlamaDecoderLayerWithGNN(nn.Module):
     def __init__(self, config, layer_idx):
@@ -294,7 +293,7 @@ class LlamaDecoderLayerWithGNN(nn.Module):
             print ("No MLP, also removed skip connection.")
         ######## Initialize MLP based on the configuration #######         
 
-        ######## MLP-GIN OPTIONS: Additional aggregrations before FF MLP layer ############
+        ######## MLP-GIN OPTIONS: Additional aggregrations before FF MLP layer ######## #TODO not tested
         elif self.gnn_config.MLP_type == 'LlamaMLP_HalfwayGIN':
             self.mlp = LlamaMLP_HalfwayGIN(config)
         elif self.gnn_config.MLP_type == 'LlamaMLP_HalfwayGIN_MultiHop':
@@ -303,7 +302,7 @@ class LlamaDecoderLayerWithGNN(nn.Module):
         elif self.gnn_config.MLP_type == 'LlamaMLP_HalfwayGIN_MultiAggregration':
             self.mlp = LlamaMLP_HalfwayGIN_MultiAggregration(config)
             print ("LlamaMLP_HalfwayGIN_MultiAggregration, multiple aggregators.")
-        ######## MLP-GIN OPTIONS ############
+        ######## MLP-GIN OPTIONS: Additional aggregrations before FF MLP layer  ########
         
         else:
             print (f"Unknown MLP type: {self.gnn_config.MLP_type}, falling back to standart MLP type.")
@@ -337,7 +336,6 @@ class LlamaDecoderLayerWithGNN(nn.Module):
                 )
             # Initialize trainable_scale with the calculated linear scale
             self.trainable_scale = nn.Parameter(torch.tensor(linear_scale, dtype=torch.float32))
-
 
         elif self.gnn_mode == 'single':
             self.gnn = CausalGraphNeuralNetwork(self.gnn_config, transformer_hidden_dim=config.hidden_size)
@@ -409,6 +407,7 @@ class LlamaDecoderLayerWithGNN(nn.Module):
                     combined_hidden_states=combined_hidden_states #+hidden_states_attention
 
             ############ MLP BLOCK with RESIDULAL ##############
+            #TODO: not tested, use with caution
             residual = combined_hidden_states
             combined_hidden_states = self.post_attention_layernorm(combined_hidden_states)
 
@@ -423,7 +422,7 @@ class LlamaDecoderLayerWithGNN(nn.Module):
                 hidden_states =  mlp_out
             ############ MLP BLOCK with RESIDULAL ##############
 
-        elif self.gnn_config.gnn_logic == 'after_MLP':
+        elif self.gnn_config.gnn_logic == 'after_MLP': #TODO not tested
             # Apply MLP first, then GNN
 
             ############ MLP BLOCK with RESIDULAL ##############
@@ -446,7 +445,7 @@ class LlamaDecoderLayerWithGNN(nn.Module):
             combined_hidden_states = self.apply_gnn(combined_hidden_states, adj, attention_mask, position_embeddings)
             hidden_states = combined_hidden_states  # Final hidden states include GNN output
 
-        elif self.gnn_config.gnn_logic == 'parallel_GNN_MLP':
+        elif self.gnn_config.gnn_logic == 'parallel_GNN_MLP': #TODO not tested
             # Initial Layer Norm and Residual for MLP
             residual_mlp = transformer_hidden_states
             hidden_states_mlp = self.post_attention_layernorm(transformer_hidden_states)
@@ -644,7 +643,7 @@ class LlamaDecoderLayerWithGNN(nn.Module):
                         ax.set_xlabel('Tokens')
                         ax.set_ylabel('Tokens')
 
-                # Remove any extra subplots
+                # Remove extra subplots
                 for i in range(self.num_heads, rows * cols):
                     fig.delaxes(axes.flatten()[i])
 
@@ -685,7 +684,7 @@ class LlamaDecoderLayerWithGNN(nn.Module):
         edge_weight = batch.edge_weight
         batch_vector = batch.batch
 
-        # Apply RoPE if configured
+        # Apply RoPE if configured - not usually done, but kept as an option for future use
         if self.gnn_config.add_rope:
             x = x.view(batch_size, seq_len, -1)
             cos, sin = position_embeddings
@@ -724,9 +723,6 @@ class LlamaDecoderLayerWithGNN(nn.Module):
             for batch_idx in range(batch_size):
                 x = head_hidden[batch_idx]  # [seq_len, head_dim]
                 adj_matrix = head_adj[batch_idx]  # [seq_len, seq_len]
-
-                # Enforce causality and remove self-loops if not already done
-                # (This should have been handled in construct_adjacency)
 
                 edge_indices = adj_matrix.nonzero(as_tuple=False).t()
                 edge_weights = adj_matrix[edge_indices[0], edge_indices[1]]
