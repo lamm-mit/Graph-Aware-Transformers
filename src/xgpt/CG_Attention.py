@@ -596,7 +596,6 @@ class CrossAttentionPlus(nn.Module):
             # Apply softmax to obtain attention
             local_attn = F.softmax(scores, dim=-1)
 
-         
         # Mix with supplied attention if needed
         if supplied_attn is not None:
             if supplied_attn_mix>0:
@@ -609,7 +608,6 @@ class CrossAttentionPlus(nn.Module):
 
                     if causal_mask is not None:
                         attn = attn.masked_fill(causal_mask, 0) #make sure normalized attn is causal
-
             else:
                 attn = supplied_attn  # Fully use supplied attention
         else:
@@ -766,10 +764,10 @@ class PerceiverAR_Fixed_Token_Per_Latent_Scaling(nn.Module):
              
         )
 
-        #whether or not to group tokens for CG - otehrwise lattens can see ALL prior tokens 
+        #whether or not to group tokens for CG - otherwise latents can see ALL prior tokens 
         self.group_tokens_for_coarse_graining =  getattr(config.gnn_config, "group_tokens_for_coarse_graining", True)
 
-        # Fixed number of tokens per latent
+        # Compute the fixed number of tokens per latent
         self.tokens_per_latent = getattr(self.config.gnn_config, "tokens_per_latent", self.max_position_embeddings // self.num_latents)
         
         max_tokens_assignable = self.tokens_per_latent * self.num_latents
@@ -782,10 +780,9 @@ class PerceiverAR_Fixed_Token_Per_Latent_Scaling(nn.Module):
                 f"max_position_embeddings ({self.max_position_embeddings}) exceeds the assignable tokens "
                 f"({max_tokens_assignable}) when using fixed tokens per latent."
             )
-        
 
-        #initial_mix=1 means entire matrix from CG latents, =0 means all original
-        initial_mix=num_latent_layers = getattr(config.gnn_config, "mix_weights_initial", 0.1)
+        #initial_mix=1 means entire matrix from CG latents, = 0 means all original
+        initial_mix=num_latent_layers = getattr(config.gnn_config, "mix_weights_initial", 1.)
         self.mix_weights = nn.Parameter(torch.tensor([initial_mix]))  # Learnable mixing weight
 
         self.norm1 = nn.LayerNorm(self.hidden_size)
@@ -886,7 +883,6 @@ class PerceiverAR_Fixed_Token_Per_Latent_Scaling(nn.Module):
             plt.title(f"mask_encode, mask_plot: {mask_plot.shape}")
             plt.tight_layout()
             plt.show()
- 
 
         group_mask_additive = group_mask.float() * -1e9
 

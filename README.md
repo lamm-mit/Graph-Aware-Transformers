@@ -45,6 +45,9 @@ cd Graph-Aware-Transformers
 pip install -e .
 ```
 
+Additional details of the code and algorithms, including experimental features such as as coarse-grained (CG) latent representations, can be found [here](STRUCTURE.md). 
+
+
 #### Import the library for use in Python
 ```python
 from xgpt import *
