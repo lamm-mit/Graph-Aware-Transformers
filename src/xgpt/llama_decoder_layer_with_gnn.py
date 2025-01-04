@@ -252,7 +252,8 @@ class LlamaDecoderLayerWithGNN(nn.Module):
                                                       'LlamaAttentionGIN', # GIN-Attention
                                                       'LlamaAttentionPNA', # PNA-Attention
                                                       'LlamaAttentionPNA_LM', #PNA_LM-Attention, a variant of PNA
-                                                      'CG_Attention', # CG-Attention
+                                                      'CG_Attention', # CG-Attention (CG to latent space, GNN in latent space, decode to sequence space)
+                                                      'CG_Attention_Interpolate', # CG-Attention with interpolation (compute adjacency matrix in latent space, then upscale via interpolation, and GNN in sequence space)
                                                       ]:
             
             if self.gnn_config.use_GNN_from_attention == 'LlamaAttentionGIN':  

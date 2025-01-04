@@ -1,3 +1,17 @@
+#CG_Attention.py
+
+# Defines two main classes used outside
+# 1. CG_Attention: CG (encode, attention, decode) module
+# 2. CG_Attention_Interpolate: Interpolates between supplied attention and local attention
+
+# Several helper classes
+# 1. CrossAttention: CrossAttention  with additional causal_mask; LatentTransformerLayer: Transformer layer for latents
+# 2. CrossAttentionPlus: CrossAttention with additional parameters (supplied_attn, supplied_attn_mix), LatentTransformerLayerPlus: Transformer layer for latents with attention matrix (uses CrossAttentionPlus) 
+
+# Additional attention/transformer classes
+# 1. PerceiverAR_Fixed_Token_Per_Latent: PerceiverAR with fixed number of tokens per latent, used in CG_Attention, uses CrossAttention
+# 2. PerceiverAR_Fixed_Token_Per_Latent_Scaling: PerceiverAR with fixed number of tokens per latent and scaling CG_Attention_Interpolate, uses CrossAttentionPlus
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -53,15 +67,6 @@ class CrossAttention(nn.Module):
         # Calculate attention scores
         scores = torch.matmul(q, k.transpose(-2, -1)) * self.scale
 
-        '''
-        # Always apply basic causal masking
-        causal_mask_base = torch.triu(
-            torch.ones(query_len, key_len, dtype=torch.bool, device=scores.device),
-            diagonal=1
-        ).unsqueeze(0).unsqueeze(0)  # [1, 1, query_len, key_len]
-        
-        scores = scores.masked_fill(causal_mask_base, -1e9)
-        '''
         if attention_mask is not None:
             
             attention_mask = attention_mask.expand(-1, scores.size(1), -1, -1)
@@ -103,277 +108,6 @@ class LatentTransformerLayer(nn.Module):
         )
         x = x + self.mlp(self.norm2(x))
         return x
-
-class PerceiverAR(nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.config = config
-        
-        # Dimensions
-        self.hidden_size = config.hidden_size
-        self.num_heads = config.num_attention_heads
-        self.head_dim = config.hidden_size // config.num_attention_heads
-        
-        # Position embedding configurations
-        self.max_position_embeddings = getattr(config.gnn_config, "max_position_embeddings", 2048)
-        self.num_latents = getattr(config.gnn_config, "num_latents", 32)
-        
-        if self.num_latents >= self.max_position_embeddings:
-            raise ValueError(
-                f"num_latents ({self.num_latents}) must be smaller than "
-                f"max_position_embeddings ({self.max_position_embeddings})"
-            )
-            
-        # Input position embeddings for the full sequence
-        self.input_pos_emb = nn.Parameter(
-            torch.randn(1, self.max_position_embeddings, self.hidden_size) / math.sqrt(self.hidden_size)
-        )
-        
-        # Latent position embeddings
-        self.latent_pos_emb = nn.Parameter(
-            torch.randn(1, self.num_latents, self.hidden_size) / math.sqrt(self.hidden_size)
-        )
-        
-        # Learnable latent array
-        self.latent_array = nn.Parameter(
-            torch.randn(1, self.num_latents, self.hidden_size) / math.sqrt(self.hidden_size)
-        )
-
-        # Decoder queries
-        self.decoder_queries = nn.Parameter(
-            torch.randn(1, self.max_position_embeddings, self.hidden_size) / math.sqrt(self.hidden_size)
-        )
-        
-        self.group_tokens_for_coarse_graining =  getattr(config.gnn_config, "group_tokens_for_coarse_graining", False)
-
-
-        # Layers
-        self.input_to_latent = CrossAttention(
-            dim=self.hidden_size,
-            num_heads=self.num_heads,
-            head_dim=self.head_dim,
-            dropout=config.attention_dropout
-        )
-        
-        num_latent_layers = getattr(config.gnn_config, "num_latent_layers", 6)
-        self.latent_transformer = nn.ModuleList([
-            LatentTransformerLayer(
-                dim=self.hidden_size,
-                num_heads=self.num_heads,
-                head_dim=self.head_dim,
-                dropout=config.attention_dropout
-            ) for _ in range(num_latent_layers)
-        ])
-        
-        self.latent_to_output = CrossAttention(
-            dim=self.hidden_size,
-            num_heads=self.num_heads,
-            head_dim=self.head_dim,
-            dropout=config.attention_dropout
-        )
-        
-        self.norm1 = nn.LayerNorm(self.hidden_size)
-        self.norm2 = nn.LayerNorm(self.hidden_size)
-        self.final_norm = nn.LayerNorm(self.hidden_size)
-
-    def create_causal_mask(self, query_len: int, key_len: int, device: torch.device) -> torch.Tensor:
-        """
-        Creates a causal mask ensuring strict causality.
-        """ 
-        mask = torch.triu(
-            torch.ones(query_len, key_len, dtype=torch.bool, device=device),
-            diagonal=1
-        )
-        return mask.unsqueeze(0).unsqueeze(0)
-
-
-    def encode(self, hidden_states: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, torch.Tensor]:
-        
-        batch_size, seq_len, _ = hidden_states.shape
-        device = hidden_states.device
-        
-        if seq_len > self.max_position_embeddings:
-            raise ValueError(
-                f"Input sequence length ({seq_len}) exceeds maximum allowed "
-                f"length ({self.max_position_embeddings})"
-            )
-        
-        # Add position embeddings
-        input_pos = self.input_pos_emb[:, :seq_len, :]
-        hidden_states = hidden_states + input_pos
-        self.hidden_states=hidden_states
-
-        # Prepare latent array
-        latent_pos = self.latent_pos_emb
-        latents = self.latent_array + latent_pos
-        latents = latents.expand(batch_size, -1, -1)
-
-        # Create a combined attention and causal mask for input-to-latent attention
-        if attention_mask is not None:
-            # Pad the attention mask to match latent dimensions
-            if attention_mask.shape[-2] < self.num_latents or attention_mask.shape[-1] < seq_len:
-                padded_attention_mask = torch.full(
-                    (attention_mask.size(0), attention_mask.size(1), self.num_latents, seq_len),
-                    -1e9,
-                    device=device,
-                    dtype=attention_mask.dtype,
-                )
-                
-                padded_attention_mask[..., :attention_mask.size(-2), :attention_mask.size(-1)] = attention_mask
-                
-                attention_mask = padded_attention_mask
-        
-        if seq_len > self.num_latents:
-            tokens_per_group = math.ceil(seq_len / self.num_latents)
-
-            # Initialize a mask
-            group_mask = torch.ones(batch_size, 1, self.num_latents, seq_len, device=device).bool()
-
-            # Dynamically compute group boundaries with clamping logic
-            input_positions = torch.arange(seq_len, device=device)
-            latent_positions = torch.arange(self.num_latents, device=device)
-
-            # Use clamping to calculate scaled group boundaries
-            scaled_positions_start = (latent_positions * seq_len).div(self.num_latents, rounding_mode='floor')
-            scaled_positions_end = ((latent_positions + 1) * seq_len).div(self.num_latents, rounding_mode='floor') - 1
-
-            # Clamp to valid indices
-            scaled_positions_start = torch.clamp(scaled_positions_start, min=0, max=seq_len - 1)
-            scaled_positions_end = torch.clamp(scaled_positions_end, min=0, max=seq_len - 1)
-
-            if not self.group_tokens_for_coarse_graining:
-                scaled_positions_start = scaled_positions_start.fill_(0)
-
-            # Store mapping
-            self.token_to_latent_mapping = {
-                'seq_len': seq_len,
-                'starts': scaled_positions_start,
-                'ends': scaled_positions_end
-            }
-
-            # Generate group mask using clamped positions
-            for i in range(self.num_latents):
-                group_mask[:, :, i, scaled_positions_start[i]:scaled_positions_end[i] + 1] = False
-
-            # Adjust attention_mask dimensions using slicing
-            if attention_mask is not None:
-                attention_mask_sliced = attention_mask[:, :, :self.num_latents, :]
-                group_mask_additive = group_mask.float() * -1e9
-                attention_mask = attention_mask_sliced + group_mask_additive
-            else:
-                attention_mask = group_mask.float() * -1e9
-
-        else:
-            # Initialize a fully masked group mask
-            group_mask = torch.ones(batch_size, 1, self.num_latents, seq_len, device=device).bool()
-
-            # CHANGED: Store mapping with full latent size
-            if self.group_tokens_for_coarse_graining:
-                start_positions = torch.arange(self.num_latents, device=device)  # Changed from seq_len
-                end_positions = torch.arange(self.num_latents, device=device)    # Changed from seq_len
-            else:
-                start_positions = torch.zeros(self.num_latents, device=device)   # Changed from seq_len  
-                end_positions = torch.arange(self.num_latents, device=device)    # Changed from seq_len
-
-            
-            self.token_to_latent_mapping = {
-                'seq_len': seq_len,
-                'starts': start_positions,
-                'ends': end_positions
-            }
-
-            # Assign each token to a unique latent position
-            for i in range(seq_len):
-                if self.group_tokens_for_coarse_graining:
-                    istart = i
-                else:
-                    istart = 0
-                group_mask[:, :, i, istart:i+1] = False
-
-            group_mask_additive = group_mask.float() * -1e9
-            
-            if attention_mask is not None:
-                attention_mask = group_mask_additive + attention_mask
-            else:
-                attention_mask = group_mask_additive
-
-        # Input to latent cross-attention
-        latents = self.input_to_latent(
-            query=self.norm1(latents),
-            key=self.norm2(hidden_states),
-            value=self.norm2(hidden_states),
-            attention_mask=attention_mask
-        )
-        
-        # Create strictly causal mask for latent processing
-        latent_causal_mask = torch.triu(
-            torch.ones(self.num_latents, self.num_latents, dtype=torch.bool, device=device),
-            diagonal=1
-        ).unsqueeze(0).unsqueeze(0)
-        
-        # Create new attention mask for latents
-        new_attention_mask = torch.triu(
-            torch.full((self.num_latents, self.num_latents), -1e9, device=device),
-            diagonal=1
-        ).unsqueeze(0).unsqueeze(0)
-        
-        # Process through transformer layers
-        for layer in self.latent_transformer:
-            latents = layer(latents, causal_mask=latent_causal_mask)
-                
-        return self.final_norm(latents), new_attention_mask
-
-    def decode(self, latents: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
-        batch_size = latents.shape[0]
-        device = latents.device
-        sequence_len = self.token_to_latent_mapping['seq_len']
-
-        # Use learned queries for the sequence
-        queries = self.decoder_queries[:, :sequence_len, :].expand(batch_size, -1, -1) #   +self.hidden_states
-        
-
-        # Initialize group mask
-        group_mask = torch.ones(batch_size, 1, sequence_len, self.num_latents, device=device).bool()
-
-        starts = self.token_to_latent_mapping['starts']  # Contains all the token-to-latent mapping info
-        ends = self.token_to_latent_mapping['ends']
-
-        # Create mask in one go
-        token_pos = torch.arange(sequence_len, device=device)[:, None]  # [seq_len, 1]
-        starts = starts[None, :]  # [1, num_latents]
-        ends = ends[None, :]      # [1, num_latents]
-        
-        # Which latents can see each token position
-        mask = (token_pos >= starts) & (token_pos <= ends)  # [seq_len, num_latents]
-        group_mask[:, 0] = ~mask
-
-        # Convert to additive mask
-        group_mask_additive = group_mask.float() * -1e9
-
-
-        # Combine with provided attention mask
-        if attention_mask is not None:
-            attention_mask = attention_mask[:, :, :sequence_len, :self.num_latents]
-            padded_attention_mask = torch.full(
-                (attention_mask.size(0), attention_mask.size(1), sequence_len, self.num_latents),
-                -1e9,
-                device=device,
-                dtype=attention_mask.dtype
-            )
-            padded_attention_mask[..., :attention_mask.size(-2), :attention_mask.size(-1)] = attention_mask
-            attention_mask = padded_attention_mask + group_mask_additive
-        else:
-            attention_mask = group_mask_additive
-
-        # Perform latent-to-output attention
-        output = self.latent_to_output(
-            query=queries,
-            key=latents,
-            value=latents,
-            attention_mask=attention_mask
-        )
-
-        return self.final_norm(output)
       
 ### Class to encode/decode with fixed number of tokens per latent, inspired by PerceiverAR 
 class PerceiverAR_Fixed_Token_Per_Latent(nn.Module):
@@ -408,7 +142,6 @@ class PerceiverAR_Fixed_Token_Per_Latent(nn.Module):
                 f"({max_tokens_assignable}) when using fixed tokens per latent."
             )
         
-
         # Input position embeddings for the full sequence
         self.input_pos_emb = nn.Parameter(
             torch.randn(1, self.max_position_embeddings, self.hidden_size) / math.sqrt(self.hidden_size)
@@ -797,10 +530,8 @@ class CG_Attention (nn.Module):
         # Sum up all reconstructed sequences (hierarchical integration)
         integrated_output = sum(reconstructed_sequences)
 
-        # Add final skip connection with the original input
+        # Add skip connection with the original input
         #integrated_output = integrated_output + hidden_states
-
-        #print ("integrated_output", integrated_output.shape)
 
         return integrated_output, None, None
 
@@ -1269,8 +1000,7 @@ class PerceiverAR_Fixed_Token_Per_Latent_Scaling(nn.Module):
         if attention_mask is not None:
             # Convert attention_mask from pre-softmax (-1e9 for invalid) to binary mask
             binary_attention_mask = (attention_mask > -1e5).float()  # 1 for valid, 0 for invalid
-            binary_attention_mask = binary_attention_mask#.unsqueeze(1).unsqueeze(1)  # Broadcast to [batch, head, seq, seq]
-
+            
             # Apply binary mask to scaled_adj_matrix
             scaled_adj_matrix = scaled_adj_matrix * binary_attention_mask
 
@@ -1309,8 +1039,7 @@ import torch
 import torch.nn as nn
 from typing import Optional, Tuple
 
-
-class LlamaAttentionHierarchicalVariant_2_PerceiverAR_Fixed_Token_Per_Latent_Interpolate(nn.Module):
+class CG_Attention_Interpolate (nn.Module):
     def __init__(self, config, layer_idx: Optional[int] = None):
         super().__init__()
          
