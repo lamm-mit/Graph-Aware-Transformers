@@ -46,13 +46,10 @@ Detailed examples on how to set up/train models are included below.
 
 Here we show how to create a GIN-Transformer model from scratch. We use the ```meta-llama/Meta-Llama-3-8B-Instruct``` model as source for basic model hyperparameters (not weights, however). 
 
-Step 1: Load dataset (necessary to train custom tokenizer)
-
-Step 2: Train tokenizer
-
-Step 3: Setup GIN-Transformer model
-
-Step 4: Train moodel
+- Step 1: Load dataset (necessary to train custom tokenizer)
+- Step 2: Train tokenizer
+- Step 3: Setup GIN-Transformer model
+- Step 4: Train moodel
 
 ### Load dataset and train tokenizer
 
@@ -327,11 +324,9 @@ tokenizer.push_to_hub ()
 
 Here we show how to fine-tune a pre-trained Transformer model using the Sparse-GIN fine-tuning method. We use the ```meta-llama/Llama-3.2-3B-Instruct``` model as pre-trained model. 
 
-Step 1: Load dataset  
-
-Step 2: Create Sparse-GIN on top of pre-trained Llama model 
-
-Step 3: Train moodel
+- Step 1: Load dataset  
+- Step 2: Create Sparse-GIN on top of pre-trained Llama model 
+- Step 3: Train moodel
 
 #### Load dataset
 
@@ -487,4 +482,28 @@ trainer = SFTTrainer(
 
 # Train
 trainer.train()
+```
+#### Model weights and other datasets
+
+A trained model can be found here [lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-orca-math-word-problems](https://huggingface.co/lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-orca-math-word-problems).
+
+Additional datasets:
+
+1) [lamm-mit/SAGI-1-SYMBOLIC_DATA_PLUS_REASONING_DATA_V1](https://huggingface.co/datasets/lamm-mit/SAGI-1-SYMBOLIC_DATA_PLUS_REASONING_DATA_V1)
+2) [lamm-mit/UniRef50_512_all](https://huggingface.co/datasets/lamm-mit/UniRef50_512_all)
+3) [lamm-mit/UniRef50_512_5M](https://huggingface.co/datasets/lamm-mit/UniRef50_512_5M)
+4) [lamm-mit/UniRef50_512_500K](https://huggingface.co/datasets/lamm-mit/UniRef50_512_500K)
+5) [lamm-mit/music21_logic_dataset](https://huggingface.co/datasets/lamm-mit/music21_logic_dataset/settings)
+
+## Reference
+
+```bibtex
+@article{Buehler2025GraphAwareGPT,
+  title={Graph-Aware Isomorphic Attention for Adaptive Dynamics in Transformers},
+  author={Markus J. Buehler},
+  journal={arXiv},
+  year={2025},
+  publisher={}
+  url={}
+}
 ```
