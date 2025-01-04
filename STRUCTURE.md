@@ -27,7 +27,7 @@ Implements attention mechanisms with GNN functionality, replacing standard Llama
 - **GINLayer**: Implements a Graph Isomorphism Network (GIN) layer.
 - **LlamaAttentionGIN**: Replaces multi-headed attention with GIN-based aggregation.
 - **LlamaAttentionPNA**: Uses Principal Neighborhood Aggregation (PNA) for attention.
-- **LlamaAttentionPNA_LM**: Adapts PNA-based attention for language modeling (variant with per-token aggregration thatn LlamaAttentionPNA versus processing each hidden dimension index separately as in LlamaAttentionPNA).
+- **LlamaAttentionPNA_LM**: Adapts PNA-based attention for language modeling (variant with per-token aggregation that LlamaAttentionPNA versus processing each hidden dimension index separately as in LlamaAttentionPNA).
 
 ### graph_neural_network.py
 Implements GNN layers for causal modeling and message-passing, for use in fine-tuning:

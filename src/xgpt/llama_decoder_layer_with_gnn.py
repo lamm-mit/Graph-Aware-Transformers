@@ -247,7 +247,7 @@ class LlamaDecoderLayerWithGNN(nn.Module):
         self.layer_idx = layer_idx
     
         # Initialize self-attention layers based on the configuration
-        if self.gnn_config.use_GNN_from_attention in ['LlamaAttention_Original', # original Llama attention (fallback option yields similar behavior, albeit using the LLAMA_ATTENTION_CLASSES functio from the original code)
+        if self.gnn_config.use_GNN_from_attention in ['LlamaAttention_Original', # original Llama attention (fallback option yields similar behavior, albeit using the LLAMA_ATTENTION_CLASSES function from the original code)
                                                       'LlamaAttentionGIN', # GIN-Attention
                                                       'LlamaAttentionPNA', # PNA-Attention
                                                       'LlamaAttentionPNA_LM', #PNA_LM-Attention, a variant of PNA
@@ -299,13 +299,13 @@ class LlamaDecoderLayerWithGNN(nn.Module):
         elif self.gnn_config.MLP_type == 'LlamaMLP_HalfwayGIN_MultiHop':
             self.mlp = LlamaMLP_MultiHop(config)
             print ("LlamaMLP_MultiHop, does GIN inside MLP, A, A2, A3, multi-hop.")
-        elif self.gnn_config.MLP_type == 'LlamaMLP_HalfwayGIN_MultiAggregration':
-            self.mlp = LlamaMLP_HalfwayGIN_MultiAggregration(config)
-            print ("LlamaMLP_HalfwayGIN_MultiAggregration, multiple aggregators.")
+        elif self.gnn_config.MLP_type == 'LlamaMLP_HalfwayGIN_MultiAggregation':
+            self.mlp = LlamaMLP_HalfwayGIN_MultiAggregation(config)
+            print ("LlamaMLP_HalfwayGIN_MultiAggregation, multiple aggregators.")
         ######## MLP-GIN OPTIONS: Additional aggregrations before FF MLP layer  ########
         
         else:
-            print (f"Unknown MLP type: {self.gnn_config.MLP_type}, falling back to standart MLP type.")
+            print (f"Unknown MLP type: {self.gnn_config.MLP_type}, falling back to standard MLP type.")
             self.mlp = LlamaMLP(config)
 
         self.input_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
@@ -411,7 +411,7 @@ class LlamaDecoderLayerWithGNN(nn.Module):
             residual = combined_hidden_states
             combined_hidden_states = self.post_attention_layernorm(combined_hidden_states)
 
-            if self.gnn_config.MLP_type in ['LlamaMLP_HalfwayGIN', 'LlamaMLP_HalfwayGIN_MultiHop', 'LlamaMLP_HalfwayGIN_MultiAggregration']:
+            if self.gnn_config.MLP_type in ['LlamaMLP_HalfwayGIN', 'LlamaMLP_HalfwayGIN_MultiHop', 'LlamaMLP_HalfwayGIN_MultiAggregation']:
                 mlp_out = self.mlp(combined_hidden_states, self_attn_weights)
             else: #standard
                 mlp_out = self.mlp(combined_hidden_states)

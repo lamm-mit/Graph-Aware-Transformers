@@ -48,9 +48,9 @@ class FlashAttentionKwargs(TypedDict, total=False):
 
     Attributes:
         cu_seq_lens_q (`torch.LongTensor`, *optional*)
-            Gets cumlative sequence length for query state.
+            Gets cumulative sequence length for query state.
         cu_seq_lens_k (`torch.LongTensor`, *optional*)
-            Gets cumlative sequence length for key state.
+            Gets cumulative sequence length for key state.
         max_length_q (`int`, *optional*):
             Maximum sequence length for query state.
         max_length_k (`int`, *optional*):
