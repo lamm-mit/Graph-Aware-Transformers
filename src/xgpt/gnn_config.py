@@ -50,7 +50,7 @@ class GNNConfig(PretrainedConfig):
         use_original_hidden_states: bool = False,
         use_original_hidden_states_add_attention: bool = False,
         use_GNN_from_attention: str = 'none',
-        N_GNN_from_attention_layers: int = 3,
+        N_GNN_from_attention_layers: int = 1,
         
         use_GNN_from_attention_add_RoPE_at_every_layer: bool = False,
 

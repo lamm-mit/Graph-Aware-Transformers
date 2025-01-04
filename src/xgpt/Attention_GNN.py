@@ -218,7 +218,11 @@ class LlamaAttentionGIN(nn.Module):
         self.head_dim = getattr(config, "head_dim", self.hidden_size // self.num_heads)
         self.num_key_value_heads = config.num_key_value_heads
         self.num_key_value_groups = self.num_heads // self.num_key_value_heads
-        self.num_attention_layers = self.config.gnn_config.N_GNN_from_attention_layers
+
+        # TODO - add multiple GIN attention layer as option
+        # self.num_attention_layers = self.config.gnn_config.N_GNN_from_attention_layers
+        self.num_attention_layers = 1 #only 1
+        
         self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.attention_bias)
         self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
 
@@ -321,7 +325,6 @@ class LlamaAttentionGIN(nn.Module):
         self.attention_GIN_MLP_GIN_sharp_softplus_beta=getattr(self.config.gnn_config, "attention_GIN_MLP_GIN_sharp_softplus_beta", 10.0)
 
         ####### parameters for scaling adjacency used for PNA ############
-        self.num_attention_layers=1 #only 1
         self.threshold_mode = getattr(self.config.gnn_config, "attention_GIN_MLP_GIN_threshold_mode", "none")
         threshold = nn.Parameter(torch.tensor(getattr( self.config.gnn_config, "attention_GIN_MLP_GIN_threshold_value", 0.2) ))  # Initialize threshold
         learnable_threshold = getattr(self.config.gnn_config, "attention_GIN_MLP_GIN_learnable_threshold", False)
@@ -1231,8 +1234,6 @@ class LlamaAttentionPNA_LM(nn.Module):
         ])
 
         ####### parameters for scaling adjacency used for PNA ############
-        # Retrieve mode and parameters from config
-
         self.use_softmax = getattr(self.config.gnn_config, "attention_GIN_MLP_GIN_use_softmax", False)
         self.num_attention_layers=1 #only 1
         self.threshold_mode = getattr(self.config.gnn_config, "attention_GIN_MLP_GIN_threshold_mode", "none")
@@ -1247,7 +1248,6 @@ class LlamaAttentionPNA_LM(nn.Module):
             print ("Learnable threshold for adjaceny scaling for GIN.")
         else:
             print ("Threshold for adj scaling for GIN is not learnable.")
-            #self.threshold = getattr(self.config.gnn_config, "attention_GIN_MLP_GIN_threshold_value", threshold)
             self.threshold = [
                     torch.tensor(threshold, dtype=torch.float32) for _ in range(self.num_attention_layers)
                 ]

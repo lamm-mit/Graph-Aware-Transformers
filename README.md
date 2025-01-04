@@ -27,19 +27,6 @@ print(f"Test set size: {len(test_dataset)}")
 
 # Apply chat template
 def format_data(example):
-    # Apply chat template to format example text
-    fixed_prompt=example['instruction'].replace('"', "")
-    example["text"] = f"{fixed_prompt}{example['answer']}"
-
-    # Remove unwanted tokens from the text
-    unwanted_tokens = ["<|begin_of_text|>", "Use <|thinking|>.", "<|thinking|>", "<|/thinking|>"]
-    for token in unwanted_tokens:
-        example["text"] = example["text"].replace(token, "")
-
-    return {"text": example["text"]}
-
-# Apply chat template
-def format_data(example):
     '''
     example["text"] = tokenizer.apply_chat_template(
         [{"role": "user", "content": example["question"]}, {"role": "assistant", "content": example["answer"]}],
@@ -145,29 +132,20 @@ gnn_config = GNNConfig(
     gnn_mode='none',
     
     #use_GNN_from_attention='LlamaAttentionPNA',
-    use_GNN_from_attention='LlamaAttentionGIN',
-    
-    attention_GIN_MLP_o_proj_at_end=False,#True,
-    LlamaAttentionHierarchicalVariant_2_PerceiverAR_use_skip=True,
-    MLP_type='standard_MLP', #'linear_MLP' 'no_MLP' 'shallow_MLP'
+    use_GNN_from_attention='LlamaAttentionGIN',    
+
     attention_GIN_MLP_GIN_use_softmax=True,
     attention_GIN_MLP_use_scoring_fnct=False, #standard attn
-    
-    attention_GIN_MLP_GIN_threshold_value=0.,
-    attention_GIN_MLP_GIN_learnable_threshold=False,
-    
-    attention_GIN_MLP_separate_attention=False, 
-    
-    attention_epsilon_strategy = "uniform", attention_epsilon_uniform_value =   1.,
-    residual_epsilon_strategy = "uniform", residual_epsilon_uniform_value =0.05,
     attention_GIN_MLP_multiplier = .5,  
-    use_sharpening=True,  
-    sharpening_value_init='value', initial_sharpening_value=1.0,
+    
+    use_sharpening=True, sharpening_value_init='value', initial_sharpening_value=1.0,
+
+    attention_GIN_MLP_o_proj_at_end=False,#True,
 
     use_differential_attention = False,
-    use_layer_norm_in_GIN_MLP=True,
-     
-    N_GNN_from_attention_layers=1,    
+
+    ## Transformer FF MLP type
+    MLP_type='standard_MLP', #'linear_MLP' 'no_MLP' 'shallow_MLP'
 )
 
 model_with_gnn  = load_model_with_pretrained_transformer( gnn_config, transformer_config, 
