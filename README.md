@@ -94,6 +94,8 @@ tokenizer.padding_side,    tokenizer.pad_token
 
 #### Create GIN model
 ```python
+
+#Load Graph-Aware Transformer library
 from xgpt import *
 
 from transformers import set_seed
@@ -208,8 +210,9 @@ class SampleGenerationCallback(TrainerCallback):
                     average_trainable_scale = total_scale / num_layers
                     self.trainable_scale_history.append((state.global_step, layer_scales, average_trainable_scale))
                     print(f"Average trainable_scale at step {state.global_step}: {average_trainable_scale}")
-            except:
-                print ()
+
+            except Exception as e:
+                raise OSError(f"Error: {str(e)}")
 
 sample_generation_callback = SampleGenerationCallback(
     model=model_with_gnn,
@@ -217,7 +220,9 @@ sample_generation_callback = SampleGenerationCallback(
     prompts=[
              test_dataset['text'][0][:-60],
              test_dataset['text'][10][:-60]
+             #...
             ],
+
     max_tokens=128,
     temperature=0.1,
     sample_steps=sample_steps,
@@ -302,7 +307,9 @@ print(f"Test set size: {len(test_dataset)}")
 #### Create Sparse-GIN model on top of pre-trained LLM
 
 ```python
+#Load Graph-Aware Transformer library
 from xgpt import *
+
 from transformers import LlamaConfig, LlamaForCausalLM, LlamaTokenizerFast
 
 pretrained_model_name = "meta-llama/Llama-3.2-3B-Instruct"
