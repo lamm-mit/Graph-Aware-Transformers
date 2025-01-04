@@ -1,9 +1,14 @@
+# Attention_GNN.py
+
+# Contains three classes:
+# - LlamaAttentionGIN: GIN-based attention mechanism.   
+# - LlamaAttentionPNA: PNA-based attention mechanism.
+# - LlamaAttentionPNA_LM: PNA-based attention mechanism adapted for LM.
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from datetime import datetime
-
-from typing import List, Optional, Tuple, Union
 
 from transformers.models.llama.modeling_llama import (
     LlamaRMSNorm,
@@ -11,7 +16,6 @@ from transformers.models.llama.modeling_llama import (
 )
 from transformers.models.llama.modeling_llama import *
 
-from typing import Optional, Tuple
 import matplotlib.pyplot as plt
 
 def FlowThreshold(x, threshold, sharpness_1=5.0, sharpness_2=50.0):
@@ -87,7 +91,6 @@ def scaled_topk_causal_4d(adj_matrix, sparsity_frac=0.5, threshold=0.0):
 
     return processed_adj
 
-  
 
 import torch
 import torch.nn as nn
@@ -166,8 +169,6 @@ class GINLayer(nn.Module):
         out = self.mlp(out)
         return out
     
-
- 
 def reset_threshold_parameters(model, new_value):
     """
     Resets all 'threshold' parameters in the model to the specified value.
@@ -445,8 +446,6 @@ class LlamaAttentionGIN(nn.Module):
 
         return attn_weights
          
-     
-
     def process_adjacency_with_modes(self, adj_matrix, layer_idx):
         """
         Process the adjacency matrix using various modes (SiLU, binary thresholding, top-k, or combined).
@@ -759,13 +758,10 @@ class LlamaAttentionGIN(nn.Module):
 
         return attn_output, attn_weights, past_key_value
 
-
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
-
 
 class LlamaAttentionPNA(nn.Module):
     """Multi-headed attention replaced by sum, mean, max, and variance aggregators."""
@@ -1169,13 +1165,8 @@ class LlamaAttentionPNA(nn.Module):
 
         attn_output = torch.cat(head_outputs, dim=1)  # (b, h, s, head_dim)
 
-        #blending original attention with PNA
-        #blend_ratio = torch.sigmoid(self.residual_epsilon[layer_idx]) 
-        blend_ratio =  self.residual_epsilon[layer_idx].clamp(min=0, max=1.0)
-
+        #blend_ratio =  self.residual_epsilon[layer_idx].clamp(min=0, max=1.0)
         #attn_output=(1 - blend_ratio) * original_attn_output + blend_ratio * attn_output
-        #TEST
-        #attn_output=  original_attn_output  
 
         attn_output = attn_output.transpose(1, 2).contiguous().view(bsz, q_len, -1) # (b, s, hidden_size)
         attn_output = self.o_proj(attn_output)
@@ -1184,7 +1175,6 @@ class LlamaAttentionPNA(nn.Module):
             attn_weights = None
 
         return attn_output, attn_weights, past_key_value
-
 
 
 import torch
@@ -1214,10 +1204,7 @@ class LlamaAttentionPNA_LM(nn.Module):
 
         # Aggregator MLP for up to 4 aggregators: sum, max, var, min
 
-        print ("LlamaAttentionPNA_LM - 4 aggregators: sum, max, var, min")
-
         num_aggrgs=4
-        #MLP_mult=1
 
         # Check for attention_GIN_MLP_multiplier in gnn_config
         if hasattr(self.config, 'gnn_config') and hasattr(self.config.gnn_config, 'attention_GIN_MLP_multiplier'):
@@ -1266,16 +1253,13 @@ class LlamaAttentionPNA_LM(nn.Module):
                 ]
 
         self.binary_scale = getattr(self.config.gnn_config, "attention_GIN_MLP_GIN_binary_scale", 1.0)
-        self.top_k_frac = getattr(self.config.gnn_config, "attention_GIN_MLP_GIN_top_k_fraction_of_sequence_length", 0.1) #%10 of sequence length is used
-        #self.blend_alpha = nn.Parameter(torch.tensor(-2.0))
-
+        self.top_k_frac = getattr(self.config.gnn_config, "attention_GIN_MLP_GIN_top_k_fraction_of_sequence_length", 0.1)  #%10 of sequence length is used
+        
         uniform_value = getattr(self.config.gnn_config, "residual_epsilon_uniform_value", 0.1) #10% PNA
         self.residual_epsilon = nn.ParameterList([
             nn.Parameter(torch.tensor(uniform_value)) for _ in range(self.num_attention_layers)
         ])
         self.attention_GIN_MLP_GIN_softmax_temperature=getattr(self.config.gnn_config, "attention_GIN_MLP_GIN_softmax_temperature", 1.0)
-
-
         ####### parameters for scaling adjacency used for PNA ############
 
     def _normalize_causal_adjacency(self, A, causal_mask):

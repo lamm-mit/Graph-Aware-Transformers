@@ -2,9 +2,6 @@
 from transformers.models.llama.modeling_llama import *
 from transformers import PretrainedConfig
 
-#import warnings
-
-
 class GNNConfig(PretrainedConfig):
     def __init__(
         self,
@@ -21,12 +18,12 @@ class GNNConfig(PretrainedConfig):
         degree: list = None,
         norm_to_hidden_states: bool = False,
         remove_self_connections: bool = True,
-        #use_attention_as_edge_weight: bool = False,
+
         continuous_transform_alpha: float = 10.0,
         zero_below_epsilon_threshold: bool = True,
         threshold: float = 0.5,
         epsilon_threshold: float = 0.5,
-        #use_mean_attention: bool = True,
+
         add_rope: bool = False,
         enforce_causality: bool = True,
         gnn_type: str = 'causal_gnn',
@@ -54,7 +51,7 @@ class GNNConfig(PretrainedConfig):
         use_original_hidden_states_add_attention: bool = False,
         use_GNN_from_attention: str = 'none',
         N_GNN_from_attention_layers: int = 3,
-        #GNN_from_attention_layers_o_proj_last_only: bool=False,
+        
         use_GNN_from_attention_add_RoPE_at_every_layer: bool = False,
 
         attention_epsilon_strategy : str = "default",
@@ -85,14 +82,14 @@ class GNNConfig(PretrainedConfig):
         use_no_norm_in_GIN_MLP: bool= False,
 
         use_hierarchical_attention: bool = False,
-        #latent_size: int = 512,
+        
         num_latent_layers: int=4,
         num_latents: int=32,
-        #use_positional_embeddings_in_latent: bool = True,
+        
 
         hierarchical_enc_dec_type:str = 'PerceiverAR',
         num_latents_list: list=[64, 32, 8],
-        max_position_embeddings: int = 2048, #max length in PerceiverAR etc.
+        max_position_embeddings: int = 2048, 
         use_fixed_number_of_tokens_per_latent: bool = False,
 
         MLP_type: str = 'standard_MLP',
@@ -158,7 +155,7 @@ class GNNConfig(PretrainedConfig):
         self.residual_epsilon_strategy = residual_epsilon_strategy
         self.attention_epsilon_uniform_value = attention_epsilon_uniform_value  # Default value if uniform strategy is used
         self.residual_epsilon_uniform_value = residual_epsilon_uniform_value # Default value if uniform strategy is used
-        self.attention_GIN_MLP_multiplier=attention_GIN_MLP_multiplier #multiplier in FF MLP in GIN
+        self.attention_GIN_MLP_multiplier=attention_GIN_MLP_multiplier  
         self.initial_sharpening_value=initial_sharpening_value
         self.use_sharpening=use_sharpening
 
@@ -211,7 +208,7 @@ class GNNConfig(PretrainedConfig):
         self.zero_below_epsilon_threshold = zero_below_epsilon_threshold
         self.threshold = threshold
         self.epsilon_threshold=epsilon_threshold 
-        #self.use_mean_attention = use_mean_attention
+
         self.add_rope = add_rope
         self.enforce_causality = enforce_causality
         self.gnn_type = gnn_type
@@ -256,6 +253,7 @@ class GNNConfig(PretrainedConfig):
             self.scalers = scalers if scalers is not None else ['identity', 'amplification', 'attenuation']
             self.degree = degree if degree is not None else [1.] * 10  # Default to a list of ones
 
+        #for GIN
         if self.gnn_type == "causal_gin":
             self.GIN_use_MLP=GIN_use_MLP
             self.GIN_hidden_dim_multiplier = GIN_hidden_dim_multiplier 
@@ -271,7 +269,7 @@ class GNNConfig(PretrainedConfig):
         # Validation for `threshold` and `gnn_logic`
         assert isinstance(self.threshold, float) and self.threshold >= 0, \
             f"Threshold must be a non-negative float, got {self.threshold}"
+
         assert self.gnn_logic in ['before_MLP', 'after_MLP', 'parallel_GNN_MLP'], \
             f"Invalid gnn_logic value: {self.gnn_logic}. Expected 'before_MLP', 'parallel_GNN_MLP', or 'after_MLP'."
- 
  

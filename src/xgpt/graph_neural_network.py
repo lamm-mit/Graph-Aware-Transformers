@@ -33,7 +33,6 @@ class CausalPNALayer(MessagePassing):
         act="relu",
         act_kwargs=None,
         activation_fn=None,
-        train_norm=False,
         **kwargs,
     ):
         super().__init__(aggr='add', node_dim=0, **kwargs)
