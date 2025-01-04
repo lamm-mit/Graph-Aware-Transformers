@@ -1,9 +1,11 @@
-# File Documentation
+# Code and File Documentation
+
+We provide additional details about the code, structure, flow and algorithms featured in this repository. 
 
 ### custom_tokenizer.py
-This file contains utilities for creating a custom tokenizer based on the `LlamaTokenizerFast` and BPE (Byte Pair Encoding). No class definitions are present.
+This file contains utilities for creating a custom tokenizer based on the `LlamaTokenizerFast` and BPE (Byte Pair Encoding). 
 
-### gnn_config.py
+### gnn_config.py: Key config for all features included in this code 
 Defines a configuration class for GNN integration:
 - **GNNConfig**: Stores and manages GNN parameters, including layer counts and dimensions.
 
@@ -12,10 +14,10 @@ Enhances Llama decoder layers with GNN functionality:
 - **LlamaDecoderLayerWithGNN**: Key class, integrates GNNs into Llama decoder layers, offering methods for constructing adjacency matrices and applying GNNs.
 
 Other classes:
-- **AggregatedLearnableAdjacencyTransformer**: Computes learnable adjacency matrices for GNNs in transformers.
-- **LlamaAttention_Original**: Implements original multi-headed attention mechanisms.
+- **AggregatedLearnableAdjacencyTransformer**: Computes learnable adjacency matrices for GNNs in transformers. Experimental. 
+- **LlamaAttention_Original**: Implements original multi-headed attention mechanisms. Included again for reference. 
 - **LlamaSimpleMLP**: Implements a simple MLP layer for integration with transformers.
-- **ShallowLlamaMLP**: Defines a shallow variant of MLP for GNN use.
+- **ShallowLlamaMLP**: Defines a shallow variant of MLP.
 
 Note: **LlamaMLP** is defined in the original Llama class, not repeated here. 
 
@@ -29,13 +31,15 @@ Implements attention mechanisms with GNN functionality, replacing standard Llama
 
 ### graph_neural_network.py
 Implements GNN layers for causal modeling and message-passing, for use in fine-tuning:
-- **CausalPNALayer**: A PNA layer tailored for causal relationships.
-- **CausalGCNLayer**: A GCN (Graph Convolutional Network) layer adapted for causal modeling.
 - **CausalGINLayer**: A GIN layer with causal masking and messaging capabilities.
+
+Additionalm experimental features: 
+- **CausalGCNLayer**: A GCN (Graph Convolutional Network) layer adapted for causal modeling.
+- **CausalPNALayer**: A PNA layer tailored for causal relationships.
 - **CausalGNNRecombinationLayer**: Combines multiple GNN strategies for enhanced performance.
 - **CausalGraphNeuralNetwork**: Combines multiple GNN layers and provides forward propagation with activation functions.
 
-## Experimental Features 
+## Other experimental Features (CG-Attention, and others) 
 
 ### CG_Attention.py
 
