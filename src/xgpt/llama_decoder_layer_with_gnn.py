@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from datetime import datetime
 
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Tuple
 
 from transformers.models.llama.modeling_llama import (
     LLAMA_ATTENTION_CLASSES,
@@ -17,10 +17,10 @@ from transformers.models.llama.modeling_llama import (
 from transformers.models.llama.modeling_llama import *
 
 from torch_geometric.data import Batch, Data
-from .gnn_config import GNNConfig
+
 from .graph_neural_network import CausalGraphNeuralNetwork
 
-#from .AttentionPerceiver import *
+from .CG_Attention import *
 from .Attention_GNN import *
 
 from typing import Optional, Tuple
@@ -252,6 +252,7 @@ class LlamaDecoderLayerWithGNN(nn.Module):
                                                       'LlamaAttentionGIN', # GIN-Attention
                                                       'LlamaAttentionPNA', # PNA-Attention
                                                       'LlamaAttentionPNA_LM', #PNA_LM-Attention, a variant of PNA
+                                                      'CG_Attention', # CG-Attention
                                                       ]:
             
             if self.gnn_config.use_GNN_from_attention == 'LlamaAttentionGIN':  

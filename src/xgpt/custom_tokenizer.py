@@ -1,7 +1,7 @@
 # custom_tokenizer.py
 
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Union
 from transformers import LlamaTokenizerFast
 from tokenizers import Tokenizer 
 from tokenizers.models import BPE
@@ -9,6 +9,9 @@ from tokenizers.trainers import BpeTrainer
 from tokenizers.pre_tokenizers import ByteLevel
 from tokenizers.processors import TemplateProcessing
 from tokenizers.decoders import ByteLevel as ByteLevelDecoder
+
+import matplotlib.pyplot as plt
+from datetime import datetime
 
 def train_tokenizer_from_scratch(texts, vocab_size=128,
                                  save_dir: Union[str, Path] = "./custom_tokenizer",

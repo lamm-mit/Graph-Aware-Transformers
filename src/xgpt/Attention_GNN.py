@@ -91,7 +91,6 @@ def scaled_topk_causal_4d(adj_matrix, sparsity_frac=0.5, threshold=0.0):
 
     return processed_adj
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -137,7 +136,6 @@ class AdjRMSNorm(nn.Module):
             x_norm = x_norm * self.weight
 
         return x_norm
-
 
 class GINLayer(nn.Module):
     def __init__(self, config, input_dim, hidden_dim, epsilon=0.0):

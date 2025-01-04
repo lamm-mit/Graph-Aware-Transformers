@@ -1,7 +1,7 @@
 # gnn_config.py
 from transformers.models.llama.modeling_llama import *
 from transformers import PretrainedConfig
-
+from typing import Optional
 class GNNConfig(PretrainedConfig):
     def __init__(
         self,
@@ -72,7 +72,7 @@ class GNNConfig(PretrainedConfig):
         use_graph_property_modulation_with_norm: bool = False,
         use_graph_property_modulation_with_norm_use_causal_clustering: bool = True,
         LlamaAttentionHierarchicalPerceiverAR_use_rope: bool = True,
-        LlamaAttentionHierarchicalVariant_2_PerceiverAR_use_skip: bool = True,
+        CG_Attention_use_skip: bool = True,
         group_tokens_for_coarse_graining: bool = False,
         mix_weights_initial: float=0.5,
         use_projection: bool = False,
@@ -141,7 +141,7 @@ class GNNConfig(PretrainedConfig):
         self.N_GNN_from_attention_layers =N_GNN_from_attention_layers
         self.use_GNN_from_attention_add_RoPE_at_every_layer=use_GNN_from_attention_add_RoPE_at_every_layer
         self.LlamaAttentionHierarchicalPerceiverAR_use_rope = LlamaAttentionHierarchicalPerceiverAR_use_rope
-        self.LlamaAttentionHierarchicalVariant_2_PerceiverAR_use_skip=LlamaAttentionHierarchicalVariant_2_PerceiverAR_use_skip
+        self.CG_Attention_use_skip=CG_Attention_use_skip
 
         self.mix_weights_initial=mix_weights_initial
         self.group_tokens_for_coarse_graining=group_tokens_for_coarse_graining

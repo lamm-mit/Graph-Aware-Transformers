@@ -6,16 +6,15 @@ import torch.nn.functional as F
 from torch_geometric.nn import (
     MessagePassing,
 )
-from torch_geometric.nn.aggr import DegreeScalerAggregation
+
 from torch_geometric.nn.dense.linear import Linear
 from torch_geometric.nn.inits import reset
+
 from torch_geometric.nn.resolver import activation_resolver
 from torch_geometric.utils import degree, softmax
-from torch_geometric.data import Data, Batch
 from torch_scatter import scatter_mean, scatter_add, scatter_min, scatter_max
-from typing import Any, Callable, Dict, List, Optional, Union, Tuple
-from .gnn_config import GNNConfig
 
+from .gnn_config import GNNConfig
 
 class CausalPNALayer(MessagePassing):
     def __init__(
