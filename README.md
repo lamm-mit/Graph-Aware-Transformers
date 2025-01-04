@@ -4,13 +4,23 @@ We present an approach to enhancing Transformer architectures by integrating gra
 
 ## Installation
 
+#### Install PyTorch first
+
+It is recommended to first install PyTorch separately so that ```torch_scatter``` is installed correctly.
+
+Note, for PyTorch installation, check https://pytorch.org/get-started/locally/ for details:
+
+```bash
+pip3 install torch torchvision torchaudio
+```
+
 #### Install directly from GitHub via pip
 
 ```bash
 conda create -n xgpt_env python=3.11 -y
 conda activate xgpt_env
 
-pip install git+https://github.com/lamm-mit/Graph-Aware-Transformers.git#egg=graph_aware_transformers
+pip install git+https://github.com/lamm-mit/Graph-Aware-Transformers.git#egg=xgpt
 ```
 
 #### Clone repository and install as editable library
