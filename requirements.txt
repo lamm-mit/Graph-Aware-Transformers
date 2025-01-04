@@ -1,0 +1,13 @@
+torch
+torchvision
+torchaudio
+transformers
+peft
+trl
+accelerate
+torch_geometric
+torch_scatter
+tqdm
+numpy
+matplotlib
+pandas

@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xgpt"
+version = "0.1.0"
+description = "A transformer model integrated with Graph Neural Networks"
+authors = [
+    { name = "Markus J. Buehler", email = "mbuehler@MIT.EDU" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache 2.0 License",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "torch_geometric",
+    "torch_scatter",
+    "transformers",
+    "peft",
+    "accelerate",
+    "trl",
+    "tqdm",
+    "numpy",
+    "matplotlib",
+    "pandas",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
