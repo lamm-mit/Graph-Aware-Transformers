@@ -8,7 +8,7 @@ By evolving Transformers as hierarchical GIN models, we reveal their implicit ca
 
 ![image](https://github.com/user-attachments/assets/02c9b587-73f0-4293-84f8-574bc2e9018c)
 
-Figure 1: Eecoder-only transformer architecture (panel A), adapted here by using a GNN-based self-attention mechanism with a graph neural network. As another variant (panel B) suitable for fine-tuning a pre-trained model akin to a LoRA model, we introduce Sparse-GIN, an option where we retain the adjacency matrix predicted by the pretrained model but instead use it to construct a sparse adjacency matrix.
+Figure 1: Encoder-only transformer architecture (panel A), adapted here by using a GNN-based self-attention mechanism with a graph neural network. As another variant (panel B) suitable for fine-tuning a pre-trained model akin to a LoRA model, we introduce Sparse-GIN, an option where we retain the adjacency matrix predicted by the pretrained model but instead use it to construct a sparse adjacency matrix.
 
 ![image](https://github.com/user-attachments/assets/5c15d37d-c693-453d-822a-97a36d4c9b8b)
 
@@ -47,7 +47,7 @@ cd Graph-Aware-Transformers
 pip install -e .
 ```
 
-Additional details of the code and algorithms, including experimental features such as as coarse-grained (CG) latent representations, can be found [here](STRUCTURE.md). 
+Additional details of the code and algorithms, including experimental features such as coarse-grained (CG) latent representations, can be found [here](STRUCTURE.md). 
 
 
 #### Import the library for use in Python
@@ -153,7 +153,7 @@ for test in test_cases:
 print(f"\nVocabulary size: {len(tokenizer)}")
 print(f"Special tokens: {tokenizer.special_tokens_map}")
 
-tokenizer.padding_side,    tokenizer.pad_token
+# tokenizer.padding_side,    tokenizer.pad_token
 ```
 You can also push the tokenizer to the hub:
 ```python
@@ -298,7 +298,7 @@ sample_generation_callback = SampleGenerationCallback(
 
 # Training arguments and initialization remain the same
 training_args = SFTConfig(
-    output_dir="./results_output,
+    output_dir="./results_output",
     eval_strategy="steps",
     eval_steps=sample_steps,
     learning_rate=1e-4, #1e-4,
@@ -460,6 +460,7 @@ freeze_except_select(model_with_gnn, unfreeze_keywords=['gnn',
                                                        verbose=True)
 
 count_trainable_parameters(model_with_gnn)
+```
 
 #### Training
 ```python
