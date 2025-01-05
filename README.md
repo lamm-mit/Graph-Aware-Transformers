@@ -64,7 +64,7 @@ Here we show how to create a GIN-Transformer model from scratch. We use the ```m
 - Step 1: Load dataset (necessary to train custom tokenizer)
 - Step 2: Train tokenizer
 - Step 3: Setup GIN-Transformer model
-- Step 4: Train moodel
+- Step 4: Train model
 
 ### Load dataset and train tokenizer
 
@@ -348,7 +348,7 @@ Here we show how to fine-tune a pre-trained Transformer model using the Sparse-G
 
 - Step 1: Load dataset  
 - Step 2: Create Sparse-GIN on top of pre-trained Llama model 
-- Step 3: Train moodel
+- Step 3: Train model
 
 #### Load dataset
 
