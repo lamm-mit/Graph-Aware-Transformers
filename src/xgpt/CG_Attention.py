@@ -103,10 +103,10 @@ class LatentTransformerLayer(nn.Module):
         x = x + self.mlp(self.norm2(x))
         return x
 
-### Class to encode/decode with fixed number of tokens per latent, inspired by PerceiverAR
-
 
 class PerceiverAR_Fixed_Token_Per_Latent(nn.Module):
+    """Class to encode/decode with fixed number of tokens per latent, inspired by PerceiverAR."""
+
     def __init__(self, config):
         super().__init__()
         self.config = config

@@ -241,10 +241,10 @@ class ShallowLlamaMLP (nn.Module):
 
         return proj
 
-### Main class: The LlamaDecoderLayerWithGNN layer that incorporates the various GNN flavors
-
 
 class LlamaDecoderLayerWithGNN(nn.Module):
+    """Main class: The LlamaDecoderLayerWithGNN layer that incorporates the various GNN flavors."""
+
     def __init__(self, config, layer_idx):
         super().__init__()
         self.hidden_size = config.hidden_size
