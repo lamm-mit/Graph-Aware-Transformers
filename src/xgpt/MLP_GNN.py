@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers.activations import ACT2FN
+
+
 class LlamaMLP_HalfwayGIN(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -37,7 +39,7 @@ class LlamaMLP_HalfwayGIN(nn.Module):
         """
         x: (batch, seq_len, hidden_size)
         adjacency: (batch, num_heads, seq_len, seq_len)
-        
+
         Steps:
         1. Apply partial MLP (gate and up projection) in full hidden dimension form.
         2. Reshape to per-head format.
@@ -70,7 +72,7 @@ class LlamaMLP_HalfwayGIN(nn.Module):
             alpha_h = self.alphas[h]
 
             # GIN update inside intermediate features:
-            h_gin = (1.0 + epsilon_h)*h_h + alpha_h*torch.matmul(A_h, h_h)
+            h_gin = (1.0 + epsilon_h) * h_h + alpha_h * torch.matmul(A_h, h_h)
 
             out_per_head.append(h_gin.unsqueeze(1))
 
@@ -81,6 +83,7 @@ class LlamaMLP_HalfwayGIN(nn.Module):
         # Finish MLP with down_proj
         out = self.down_proj(h_gin_combined)  # (b, s, hidden_size)
         return out
+
 
 class LlamaMLP_MultiHop(nn.Module):
     def __init__(self, config):
@@ -128,7 +131,7 @@ class LlamaMLP_MultiHop(nn.Module):
         """
         x: (batch, seq_len, hidden_size)
         adjacency: (batch, num_heads, seq_len, seq_len)
-        
+
         We'll compute:
         A² = A @ A
         A³ = A² @ A
@@ -162,16 +165,16 @@ class LlamaMLP_MultiHop(nn.Module):
             # Single-hop aggregation: A * Wu_x
             A_Wu_x = torch.matmul(A[:, h], Wu_x)   # (b, s, int_size)
             # Two-hop aggregation: A² * Wu_x
-            A2_Wu_x = torch.matmul(A2[:, h], Wu_x) # (b, s, int_size)
+            A2_Wu_x = torch.matmul(A2[:, h], Wu_x)  # (b, s, int_size)
             # Three-hop aggregation: A³ * Wu_x
-            A3_Wu_x = torch.matmul(A3[:, h], Wu_x) # (b, s, int_size)
+            A3_Wu_x = torch.matmul(A3[:, h], Wu_x)  # (b, s, int_size)
 
             # Combine multiple hops
             # (1+epsilon)*Wu_x for self-features
             # alpha_1*(A Wu_x) for 1-hop neighbors
             # alpha_2*(A² Wu_x) for 2-hop neighbors
             # alpha_3*(A³ Wu_x) for 3-hop neighbors
-            h_adj_h = (1.0 + epsilon_h)*Wu_x + alpha_1*A_Wu_x + alpha_2*A2_Wu_x + alpha_3*A3_Wu_x
+            h_adj_h = (1.0 + epsilon_h) * Wu_x + alpha_1 * A_Wu_x + alpha_2 * A2_Wu_x + alpha_3 * A3_Wu_x
 
             h_inter_h = Wg_x * h_adj_h  # gating
 
@@ -181,6 +184,7 @@ class LlamaMLP_MultiHop(nn.Module):
         out = torch.cat(out_per_head, dim=1)  # (b, h, s, d)
         out = out.transpose(1, 2).contiguous().view(bsz, seq_len, self.hidden_size)
         return out
+
 
 class LlamaMLP_HalfwayGIN_MultiAggregation(nn.Module):
     def __init__(self, config):
@@ -258,20 +262,20 @@ class LlamaMLP_HalfwayGIN_MultiAggregation(nn.Module):
             alpha_h = self.alphas[h]
 
             # Original (1+ε)*h_h
-            original_feat = (1.0 + epsilon_h)*h_h
+            original_feat = (1.0 + epsilon_h) * h_h
 
             # Sum-based aggregator: alpha_h * (A_h @ h_h)
             sum_agg = alpha_h * torch.matmul(A_h, h_h)  # (b, s, head_int_dim)
 
             # Max-based aggregator:
             # To implement max, we consider all neighbors. If A_h is a probability distribution,
-            # we just take a max over s dimension. For a true max over actual neighbors, 
+            # we just take a max over s dimension. For a true max over actual neighbors,
             # consider thresholding or binarizing A_h.
             # Here, let's do a straightforward max over all tokens for demonstration.
             # Expand h_h to (b, s, s, head_int_dim) to apply a max across s dimension:
             h_h_expanded = h_h.unsqueeze(2).expand(bsz, seq_len, seq_len, head_int_dim)
             # max_agg over neighbors:
-            max_agg, _ = torch.max(h_h_expanded, dim=2) # (b, s, head_int_dim)
+            max_agg, _ = torch.max(h_h_expanded, dim=2)  # (b, s, head_int_dim)
 
             # Attention-based aggregator:
             # Q, K = projections of h_h
@@ -279,7 +283,7 @@ class LlamaMLP_HalfwayGIN_MultiAggregation(nn.Module):
             K = self.attn_key_projs[h](h_h)    # (b, s, head_int_dim)
             # Compute attn scores:
             attn_scores = torch.matmul(Q, K.transpose(2, 1)) / (head_int_dim**0.5)  # (b, s, s)
-            # Combine with A_h structure: 
+            # Combine with A_h structure:
             # We'll use log trick: attn_weights = softmax(log(A_h + 1e-9) + attn_scores)
             combined_scores = attn_scores + torch.log(A_h + 1e-9)
             attn_weights = F.softmax(combined_scores, dim=-1)
@@ -287,10 +291,10 @@ class LlamaMLP_HalfwayGIN_MultiAggregation(nn.Module):
 
             # Combine all aggregators:
             # [original_feat, sum_agg, max_agg, attn_agg]
-            combined = torch.cat([original_feat, sum_agg, max_agg, attn_agg], dim=-1) # (b, s, 4*head_int_dim)
+            combined = torch.cat([original_feat, sum_agg, max_agg, attn_agg], dim=-1)  # (b, s, 4*head_int_dim)
 
             # Pass through aggregator MLP
-            h_gin_head = self.aggregator_mlp(combined) # (b, s, head_int_dim)
+            h_gin_head = self.aggregator_mlp(combined)  # (b, s, head_int_dim)
 
             out_per_head.append(h_gin_head.unsqueeze(1))
 

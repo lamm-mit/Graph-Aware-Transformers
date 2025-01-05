@@ -9,4 +9,4 @@ from .utils import *
 from .custom_tokenizer import *
 from .Attention_GNN import *
 from .MLP_GNN import *
-from .CG_Attention import *  
+from .CG_Attention import *
