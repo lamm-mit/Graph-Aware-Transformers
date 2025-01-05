@@ -943,7 +943,7 @@ class PerceiverAR_Fixed_Token_Per_Latent_Scaling(nn.Module):
 
 
         #The algorithm encodes the entire sequence into a fixed number of tokens per maximum sequence length
-        #When we provide a shorter sequence only a small number of latents are used. Yet, self attention in latent space is done wiht ALL latents.
+        #When we provide a shorter sequence only a small number of latents are used. Yet, self attention in latent space is done with ALL latents.
         #Hence, need to select only part of the adj matrix with active latents and scale that to the original sequence length
         #
         num_active_latents=self.num_active_latents # how many latents were used for the data

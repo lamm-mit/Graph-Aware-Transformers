@@ -1,4 +1,4 @@
-# MLP_GNN.py contains the implementation of the LlamaMLP_HalfwayGIN, LlamaMLP_MultiHop, and LlamaMLP_HalfwayGIN_MultiAggregration classes.
+# MLP_GNN.py contains the implementation of the LlamaMLP_HalfwayGIN, LlamaMLP_MultiHop, and LlamaMLP_HalfwayGIN_MultiAggregation classes.
 
 import torch
 import torch.nn as nn
@@ -182,7 +182,7 @@ class LlamaMLP_MultiHop(nn.Module):
         out = out.transpose(1, 2).contiguous().view(bsz, seq_len, self.hidden_size)
         return out
 
-class LlamaMLP_HalfwayGIN_MultiAggregration(nn.Module):
+class LlamaMLP_HalfwayGIN_MultiAggregation(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
