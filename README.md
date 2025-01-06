@@ -517,7 +517,9 @@ A trained model can be found at the LAMM Hugging Face organization.
 1) ORCA math word problems: [lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-orca-math-word-problems](https://huggingface.co/lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-orca-math-word-problems).
 2) Bio-inspired materials and technology: [lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-bio](https://huggingface.co/lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-bio)
 
-Sample output to the task ```Explain the concept of hierarchical structures in materials science, especially relating proteins and music for use as optical device. Think step by step.```:
+Sample output to the task:
+
+```Explain the concept of hierarchical structures in materials science, especially relating proteins and music for use as optical device. Think step by step.```:
 
 <pre style="white-space: pre-wrap;">
 Hierarchical structures are complex arrangements of materials at multiple scales, from the atomic to the macroscopic level. In materials science, these structures are often found in biological materials, such as proteins, which exhibit a hierarchical organization of their molecular building blocks. This hierarchical structure allows for the creation of materials with unique properties and functions.
