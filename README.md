@@ -519,7 +519,7 @@ A trained model can be found at the LAMM Hugging Face organization.
 
 Sample output to the task ```Explain the concept of hierarchical structures in materials science, especially relating proteins and music for use as optical device. Think step by step.```:
 
-```raw
+<pre style="white-space: pre-wrap;">
 Hierarchical structures are complex arrangements of materials at multiple scales, from the atomic to the macroscopic level. In materials science, these structures are often found in biological materials, such as proteins, which exhibit a hierarchical organization of their molecular building blocks. This hierarchical structure allows for the creation of materials with unique properties and functions.
 
 One example of hierarchical structures in materials science is the use of proteins as optical devices. Proteins can be engineered to have specific optical properties, such as refractive index and birefringence, which can be used to create optical devices with unique functions. For example, proteins can be used to create optical fibers with high refractive index and low birefringence, which can be used for high-speed data transmission.
@@ -531,7 +531,8 @@ The hierarchical structure of proteins also allows for the creation of materials
 The use of proteins as optical devices is a promising area of research, with potential applications in fields such as telecommunications, optics, and biomedicine. By engineering proteins with specific optical properties, researchers can create materials with unique functions and properties, such as high-speed data transmission and optical sensing.
 
 In conclusion, hierarchical structures are a key feature of materials science, particularly in the field of protein-based materials. The hierarchical organization of proteins allows for the creation of materials with unique properties and functions, such as optical devices with high refractive index and low birefringence. The use of proteins as optical devices is a promising area of research, with potential applications in fields such as telecommunications, optics, and biomedicine.<|eot_id|>
-```
+</pre>
+
 
 
 ## Reference
