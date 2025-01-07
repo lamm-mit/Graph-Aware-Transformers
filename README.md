@@ -516,6 +516,7 @@ A trained model can be found at the LAMM Hugging Face organization.
 
 1) ORCA math word problems: [lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-orca-math-word-problems](https://huggingface.co/lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-orca-math-word-problems)
 2) Bio-inspired materials and technology: [lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-bio](https://huggingface.co/lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-bio)
+3) Reasoning and logic
 
 Task:
 
