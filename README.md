@@ -543,11 +543,12 @@ In conclusion, hierarchical structures are a key feature of materials science, p
 
 ```bibtex
 @article{Buehler2025GraphAwareGPT,
-  title={Graph-Aware Isomorphic Attention for Adaptive Dynamics in Transformers},
-  author={Markus J. Buehler},
-  journal={arXiv},
-  year={2025},
-  publisher={}
-  url={}
+      title={Graph-Aware Isomorphic Attention for Adaptive Dynamics in Transformers}, 
+      author={Markus J. Buehler},
+      year={2025},
+      eprint={2501.02393},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2501.02393}, 
 }
 ```
