@@ -515,10 +515,10 @@ Figure 4: Trainable scale parameter over all layers in the model, plotted over a
 A trained model can be found at the LAMM Hugging Face organization. 
 
 1) ORCA math word problems: [lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-orca-math-word-problems](https://huggingface.co/lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-orca-math-word-problems)
-2) Bio-inspired materials and technology: [lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-bio](https://huggingface.co/lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-bio)
-3) Reasoning and logic
+2) Reasoning and logic: [lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-logic](https://huggingface.co/lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-logic)
+3) Bio-inspired materials and technology: [lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-bio](https://huggingface.co/lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-bio)
 
-Task:
+Example task:
 
 ```raw
 Explain the concept of hierarchical structures in materials science, especially relating proteins and music for use as optical device. Think step by step.
