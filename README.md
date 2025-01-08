@@ -6,11 +6,6 @@ Additionally, we expand the concept of graph-aware attention to introduce Sparse
 
 By evolving Transformers as hierarchical GIN models, we reveal their implicit capacity for graph-level relational reasoning. This perspective suggests profound implications for foundational model development, enabling the design of architectures that dynamically adapt to both local and global dependencies. Applications in bioinformatics, materials science, language modeling, and beyond could benefit from this synthesis of relational and sequential data modeling, setting the stage for interpretable and generalizable modeling strategies.
 
-<audio controls>
-  <source src="https://huggingface.co/lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-bio/resolve/main/Podcast_Isomorphic_Attention.mp3" type="audio/mpeg">
-  Your browser does not support the audio element. You can [download the audio file](https://huggingface.co/lamm-mit/Llama-3.2-3B-Instruct-Sparse-GIN-bio/resolve/main/Podcast_Isomorphic_Attention.mp3).
-</audio>
-
 ![image](https://github.com/user-attachments/assets/02c9b587-73f0-4293-84f8-574bc2e9018c)
 
 Figure 1: Encoder-only transformer architecture (panel A), adapted here by using a GNN-based self-attention mechanism with a graph neural network. As another variant (panel B) suitable for fine-tuning a pre-trained model akin to a LoRA model, we introduce Sparse-GIN, an option where we retain the adjacency matrix predicted by the pretrained model but instead use it to construct a sparse adjacency matrix.
