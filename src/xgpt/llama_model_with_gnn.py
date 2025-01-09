@@ -14,12 +14,12 @@ from .llama_decoder_layer_with_gnn import LlamaDecoderLayerWithGNN  # Ensure cor
 from .gnn_config import GNNConfig
 import torch
 import torch.nn as nn
- 
+
 from transformers.activations import ACT2FN
 from transformers.cache_utils import Cache, DynamicCache, StaticCache
 from transformers.generation import GenerationMixin
 from transformers.modeling_attn_mask_utils import AttentionMaskConverter
-#from transformers.modeling_flash_attention_utils import FlashAttentionKwargs#, _flash_attention_forward
+# from transformers.modeling_flash_attention_utils import FlashAttentionKwargs#, _flash_attention_forward
 from transformers.modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
@@ -32,7 +32,7 @@ from transformers.modeling_utils import PreTrainedModel
 from transformers.processing_utils import Unpack
 from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
 from transformers.utils import (
-   # LossKwargs,
+    # LossKwargs,
     add_code_sample_docstrings,
     add_start_docstrings,
     add_start_docstrings_to_model_forward,
@@ -63,7 +63,7 @@ class FlashAttentionKwargs(TypedDict, total=False):
     max_length_k: Optional[int]
 
 
-class LlamaModelWithGNN(LlamaModel,LlamaPreTrainedModel):
+class LlamaModelWithGNN(LlamaModel, LlamaPreTrainedModel):
 
     """
     Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`LlamaDecoderLayer`]
@@ -72,10 +72,10 @@ class LlamaModelWithGNN(LlamaModel,LlamaPreTrainedModel):
         config: LlamaConfig
     """
 
-    def __init__(self, config: LlamaConfig,  ):
+    def __init__(self, config: LlamaConfig,):
         super().__init__(config)
         self.config = config
-        
+
         # Ensure `config.gnn_config` is a GNNConfig instance
         if isinstance(config.gnn_config, dict):
             config.gnn_config = GNNConfig(**config.gnn_config)
@@ -86,16 +86,15 @@ class LlamaModelWithGNN(LlamaModel,LlamaPreTrainedModel):
         self.vocab_size = config.vocab_size
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
-         
+
         self.layers = nn.ModuleList([
             LlamaDecoderLayerWithGNN(config, layer_idx, )
             for layer_idx in range(config.num_hidden_layers)
         ])
-        
+
         self.norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.rotary_emb = LlamaRotaryEmbedding(config=config)
         self.gradient_checkpointing = False
 
         # Initialize weights and apply final processing
         self.post_init()
- 

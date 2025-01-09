@@ -16,6 +16,7 @@ from torch_scatter import scatter_mean, scatter_add, scatter_min, scatter_max
 
 from .gnn_config import GNNConfig
 
+
 class CausalPNALayer(MessagePassing):
     def __init__(
         self,
@@ -165,7 +166,7 @@ class CausalPNALayer(MessagePassing):
         # Split the output per tower
         outs = []
         for i, nn_post in enumerate(self.post_nns):
-            out = aggr_out[:, i * self.F_in : (i + 1) * self.F_in]
+            out = aggr_out[:, i * self.F_in: (i + 1) * self.F_in]
             out = nn_post(out)
             outs.append(out)
         out = torch.cat(outs, dim=1)
@@ -256,7 +257,7 @@ class CausalGINLayer(MessagePassing):
             if GIN_use_norm:
                 if self.norm_type == 'layer':
                     self.norm = nn.LayerNorm(hidden_dim)
-                    
+
                 elif self.norm_type == 'graph':
                     from torch_geometric.nn import GraphNorm
                     self.norm = GraphNorm(hidden_dim)
@@ -280,7 +281,6 @@ class CausalGINLayer(MessagePassing):
         self.epsilon = nn.Parameter(torch.zeros(1))  # Injective epsilon term
         self.edge_weight_scaling = edge_weight_scaling
 
-
     def forward(self, x, edge_index, edge_weight=None, batch=None):
         if batch is None:
             raise ValueError("Batch vector is required for causal masking.")
@@ -290,10 +290,8 @@ class CausalGINLayer(MessagePassing):
 
         # Propagate messages using the filtered causal edges and edge weights
         out = self.propagate(edge_index, x=x, edge_weight=edge_weight)
- 
-        out =  self.epsilon * x + out
 
-
+        out = self.epsilon * x + out
 
         if self.GIN_use_MLP:
             residual = out  # Save for skip connection
@@ -311,18 +309,13 @@ class CausalGINLayer(MessagePassing):
             # Adjust residual if dimensions differ
             residual = self.residual_linear(residual)
 
-            
             out = out + residual
-
 
         else:
             out = self.transform(out)
             out = self.activation_fn(out)
 
         return out
-
-
-
 
     def apply_causal_mask(self, edge_index, edge_weight, batch):
         # Identify edges that respect causality within each graph
@@ -354,6 +347,7 @@ class CausalGINLayer(MessagePassing):
             return edge_weight.view(-1, 1) * x_j
         else:
             return x_j
+
 
 class CausalGNNRecombinationLayer(MessagePassing):
     def __init__(self, hidden_dim, activation_fn=nn.ReLU()):
@@ -446,7 +440,7 @@ class CausalGraphNeuralNetwork(nn.Module):
         self.dropout = config.dropout
         self.use_layer_norm = config.use_layer_norm
         self.transformer_hidden_dim = transformer_hidden_dim
-        
+
         # Convert degree back to tensor if it's a list
         if hasattr(config, 'degree') and isinstance(config.degree, list):
             self.config.degree = torch.tensor(config.degree, dtype=torch.float32)
@@ -470,10 +464,10 @@ class CausalGraphNeuralNetwork(nn.Module):
         elif config.gnn_type == "causal_pna":
             self._init_causal_pna_layers()
         elif config.gnn_type == "causal_gin":
-            self.GIN_use_MLP=config.GIN_use_MLP
-            self.GIN_hidden_dim_multiplier=config.GIN_hidden_dim_multiplier
-            self.GIN_use_norm=config.GIN_use_norm
-            self.GIN_edge_weight_scaling=config.GIN_edge_weight_scaling
+            self.GIN_use_MLP = config.GIN_use_MLP
+            self.GIN_hidden_dim_multiplier = config.GIN_hidden_dim_multiplier
+            self.GIN_use_norm = config.GIN_use_norm
+            self.GIN_edge_weight_scaling = config.GIN_edge_weight_scaling
             self._init_causal_gin_layers()
         elif config.gnn_type == "causal_recombination":
             self._init_causal_recombination_layers()

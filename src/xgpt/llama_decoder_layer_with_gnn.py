@@ -1,5 +1,5 @@
- # llama_decoder_layer_with_gnn.py
-  
+# llama_decoder_layer_with_gnn.py
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -25,6 +25,7 @@ from .Attention_GNN import *
 
 from typing import Optional, Tuple
 import matplotlib.pyplot as plt
+
 
 class AggregatedLearnableAdjacencyTransformer(nn.Module):
     def __init__(self, num_heads, adj_transform_hidden_dim, activation='sigmoid'):
@@ -57,7 +58,9 @@ class AggregatedLearnableAdjacencyTransformer(nn.Module):
         return adj
 
 ### Original Attention Layer
-class LlamaAttention_Original(nn.Module):  
+
+
+class LlamaAttention_Original(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
     def __init__(self, config, layer_idx: Optional[int] = None):
@@ -86,11 +89,11 @@ class LlamaAttention_Original(nn.Module):
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
         self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias)
 
-        print ("q_proj size: ", self.num_heads * self.head_dim)
-        print ("k/v_proj size: ", self.num_key_value_heads * self.head_dim)
-        print ("num_key_value_groups: ", self.num_key_value_groups)
-        print ("hidden size in/out: ", self.hidden_size)
-        
+        print("q_proj size: ", self.num_heads * self.head_dim)
+        print("k/v_proj size: ", self.num_key_value_heads * self.head_dim)
+        print("num_key_value_groups: ", self.num_key_value_groups)
+        print("hidden size in/out: ", self.hidden_size)
+
         # TODO (joao): remove in v4.46 (RoPE is computed in the model, not in the decoder layers)
         self.rotary_emb = LlamaRotaryEmbedding(config=self.config)
 
@@ -166,7 +169,7 @@ class LlamaAttention_Original(nn.Module):
 
         # Plot initial adjacency matrix if debugging is enabled
         if self.config.gnn_config.plot_for_debugging:
-            print ('attn_weights', attn_weights.shape)
+            print('attn_weights', attn_weights.shape)
             head_adj_mean = attn_weights.mean(dim=1).cpu().detach().numpy()
             plt.figure(figsize=(8, 8))
             plt.imshow(head_adj_mean[0], cmap="viridis", aspect="auto")
@@ -203,41 +206,45 @@ class LlamaSimpleMLP(nn.Module):
         super().__init__()
         self.config = config
         self.hidden_size = config.hidden_size
-        #self.intermediate_size = config.intermediate_size
-        #self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=config.mlp_bias)
+        # self.intermediate_size = config.intermediate_size
+        # self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=config.mlp_bias)
         self.proj = nn.Linear(self.hidden_size, self.hidden_size, bias=config.mlp_bias)
 
-        #self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=config.mlp_bias)
+        # self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=config.mlp_bias)
         self.act_fn = ACT2FN[config.hidden_act]
 
     def forward(self, x):
-        #down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
-        #proj = self.proj(self.act_fn(x))
+        # down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+        # proj = self.proj(self.act_fn(x))
         proj = self.act_fn(self.proj(x))
         return proj
 
-### MLP variants for Transformer layer    
+### MLP variants for Transformer layer
+
+
 class ShallowLlamaMLP (nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
         self.hidden_size = config.hidden_size
         self.intermediate_size = config.intermediate_size
-        
+
         self.proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=config.mlp_bias)
         self.proj_out = nn.Linear(self.intermediate_size, self.hidden_size, bias=config.mlp_bias)
 
         self.act_fn = ACT2FN[config.hidden_act]
 
     def forward(self, x):
-        
+
         inter = self.act_fn(self.proj(x))
         proj = self.proj_out(inter)
 
         return proj
 
-### Main class: The LlamaDecoderLayerWithGNN layer that incorporates the various GNN flavors
+
 class LlamaDecoderLayerWithGNN(nn.Module):
+    """Main class: The LlamaDecoderLayerWithGNN layer that incorporates the various GNN flavors."""
+
     def __init__(self, config, layer_idx):
         super().__init__()
         self.hidden_size = config.hidden_size
@@ -245,67 +252,69 @@ class LlamaDecoderLayerWithGNN(nn.Module):
         self.head_dim = config.hidden_size // config.num_attention_heads
         self.gnn_config = config.gnn_config
         self.layer_idx = layer_idx
-    
+
         # Initialize self-attention layers based on the configuration
-        if self.gnn_config.use_GNN_from_attention in ['LlamaAttention_Original', # original Llama attention (fallback option yields similar behavior, albeit using the LLAMA_ATTENTION_CLASSES function from the original code)
-                                                      'LlamaAttentionGIN', # GIN-Attention
-                                                      'LlamaAttentionPNA', # PNA-Attention
-                                                      'LlamaAttentionPNA_LM', #PNA_LM-Attention, a variant of PNA
-                                                      'CG_Attention', # CG-Attention (CG to latent space, GNN in latent space, decode to sequence space) - uses PerceiverAR_Fixed_Token_Per_Latent
-                                                      'CG_Attention_Interpolate', # CG-Attention with interpolation (compute adjacency matrix in latent space, then upscale via interpolation, and GNN in sequence space) - uses PerceiverAR_Fixed_Token_Per_Latent_Scaling
+        if self.gnn_config.use_GNN_from_attention in ['LlamaAttention_Original',  # original Llama attention (fallback option yields similar behavior, albeit using the LLAMA_ATTENTION_CLASSES function from the original code)
+                                                      'LlamaAttentionGIN',  # GIN-Attention
+                                                      'LlamaAttentionPNA',  # PNA-Attention
+                                                      'LlamaAttentionPNA_LM',  # PNA_LM-Attention, a variant of PNA
+                                                      # CG-Attention (CG to latent space, GNN in latent space, decode to sequence space) - uses PerceiverAR_Fixed_Token_Per_Latent
+                                                      'CG_Attention',
+                                                      # CG-Attention with interpolation (compute adjacency matrix in latent space, then upscale via interpolation, and GNN in sequence space) - uses PerceiverAR_Fixed_Token_Per_Latent_Scaling
+                                                      'CG_Attention_Interpolate',
                                                       ]:
-            
-            if self.gnn_config.use_GNN_from_attention == 'LlamaAttentionGIN':  
+
+            if self.gnn_config.use_GNN_from_attention == 'LlamaAttentionGIN':
                 self.self_attn = LlamaAttentionGIN(config=config, layer_idx=layer_idx)
 
-            elif self.gnn_config.use_GNN_from_attention == 'LlamaAttentionPNA': 
+            elif self.gnn_config.use_GNN_from_attention == 'LlamaAttentionPNA':
                 self.self_attn = LlamaAttentionPNA(config=config, layer_idx=layer_idx)
 
-            elif self.gnn_config.use_GNN_from_attention == 'LlamaAttentionPNA_LM': 
+            elif self.gnn_config.use_GNN_from_attention == 'LlamaAttentionPNA_LM':
                 self.self_attn = LlamaAttentionPNA_LM(config=config, layer_idx=layer_idx)
-                
-            elif self.gnn_config.use_GNN_from_attention == 'CG_Attention': 
+
+            elif self.gnn_config.use_GNN_from_attention == 'CG_Attention':
                 self.self_attn = CG_Attention(config=config, layer_idx=layer_idx)
 
-            elif self.gnn_config.use_GNN_from_attention == 'CG_Attention_Interpolate': 
+            elif self.gnn_config.use_GNN_from_attention == 'CG_Attention_Interpolate':
                 self.self_attn = CG_Attention_Interpolate(config=config, layer_idx=layer_idx)
 
             elif self.gnn_config.use_GNN_from_attention == 'LlamaAttention_Original':
                 self.self_attn = LlamaAttention_Original(config=config, layer_idx=layer_idx)
 
         else:
-            print (f"Not found ({self.gnn_config.use_GNN_from_attention}), falling back to standard.")
+            print(f"Not found ({self.gnn_config.use_GNN_from_attention}), falling back to standard.")
             self.self_attn = LLAMA_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
 
-        ######## Initialize MLP based on the configuration #######         
-        self.skip_around_MLP = True # Usually we use skip around MLP, except for some MLP choices
+        ######## Initialize MLP based on the configuration #######
+        self.skip_around_MLP = True  # Usually we use skip around MLP, except for some MLP choices
         if self.gnn_config.MLP_type == 'linear_MLP':
-            self.mlp= LlamaSimpleMLP(config)
-            print ("Linear/simple MLP")
+            self.mlp = LlamaSimpleMLP(config)
+            print("Linear/simple MLP")
         elif self.gnn_config.MLP_type == 'standard_MLP':
             self.mlp = LlamaMLP(config)
-            print ("Standard MLP")
+            print("Standard MLP")
         elif self.gnn_config.MLP_type == 'shallow_MLP':
             self.mlp = ShallowLlamaMLP(config)
         elif self.gnn_config.MLP_type == 'no_MLP':
             self.mlp = nn.Identity()
-            self.skip_around_MLP = False # No MLP means no skip connection
-            print ("No MLP, also removed skip connection.")
-        ######## Initialize MLP based on the configuration #######         
+            self.skip_around_MLP = False  # No MLP means no skip connection
+            print("No MLP, also removed skip connection.")
+        ######## Initialize MLP based on the configuration #######
 
         ######## MLP-GIN OPTIONS: Additional aggregrations before FF MLP layer ######## #TODO not tested
         elif self.gnn_config.MLP_type == 'LlamaMLP_HalfwayGIN':
             self.mlp = LlamaMLP_HalfwayGIN(config)
         elif self.gnn_config.MLP_type == 'LlamaMLP_HalfwayGIN_MultiHop':
             self.mlp = LlamaMLP_MultiHop(config)
-            print ("LlamaMLP_MultiHop, does GIN inside MLP, A, A2, A3, multi-hop.")
+            print("LlamaMLP_MultiHop, does GIN inside MLP, A, A2, A3, multi-hop.")
         elif self.gnn_config.MLP_type == 'LlamaMLP_HalfwayGIN_MultiAggregation':
             self.mlp = LlamaMLP_HalfwayGIN_MultiAggregation(config)
-            print ("LlamaMLP_HalfwayGIN_MultiAggregation, multiple aggregators.")
+            print("LlamaMLP_HalfwayGIN_MultiAggregation, multiple aggregators.")
         ######## MLP-GIN OPTIONS: Additional aggregrations before FF MLP layer  ########
-        
+
         else:
-            print (f"Unknown MLP type: {self.gnn_config.MLP_type}, falling back to standard MLP type.")
+            print(f"Unknown MLP type: {self.gnn_config.MLP_type}, falling back to standard MLP type.")
             self.mlp = LlamaMLP(config)
 
         self.input_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
@@ -316,10 +325,10 @@ class LlamaDecoderLayerWithGNN(nn.Module):
         initial_scale = self.gnn_config.lambda_GNN_initial if self.gnn_config.lambda_GNN_initial is not None else self.gnn_config.lambda_GNN
 
         final_scale = self.gnn_config.lambda_GNN
-        if num_layers>1:
+        if num_layers > 1:
             linear_scale = initial_scale + (final_scale - initial_scale) * (layer_idx / (num_layers - 1))
         else:
-            linear_scale=initial_scale
+            linear_scale = initial_scale
 
         self.gnn_mode = self.gnn_config.gnn_mode  # 'single' or 'per_head'
 
@@ -353,7 +362,6 @@ class LlamaDecoderLayerWithGNN(nn.Module):
             self.gnn = nn.Identity()
             self.gnn_norm = nn.Identity()
 
-
     def forward(
         self,
         hidden_states: torch.Tensor,
@@ -372,9 +380,8 @@ class LlamaDecoderLayerWithGNN(nn.Module):
         hidden_states = self.input_layernorm(hidden_states)
 
         if self.gnn_config.use_original_hidden_states:
-            hidden_states_original = hidden_states #save since we need it in the case we want to use the original hidden states
+            hidden_states_original = hidden_states  # save since we need it in the case we want to use the original hidden states
 
-        
         # Self Attention
         hidden_states, self_attn_weights, present_key_value = self.self_attn(
             hidden_states=hidden_states,
@@ -387,12 +394,12 @@ class LlamaDecoderLayerWithGNN(nn.Module):
             output_attentions=True,
             **{k: v for k, v in kwargs.items() if k != 'output_attentions'},
         )
-        
-        if self.gnn_config.use_original_hidden_states: 
-            transformer_hidden_states = hidden_states_original #in this case the residual is added later
+
+        if self.gnn_config.use_original_hidden_states:
+            transformer_hidden_states = hidden_states_original  # in this case the residual is added later
         else:
             hidden_states = residual + hidden_states
-            transformer_hidden_states = hidden_states #just use output of self attention with residual
+            transformer_hidden_states = hidden_states  # just use output of self attention with residual
 
         additional_adj = kwargs.get("additional_adj", None)
         input_ids = None
@@ -402,35 +409,35 @@ class LlamaDecoderLayerWithGNN(nn.Module):
             combined_hidden_states = self.apply_gnn(transformer_hidden_states, adj, attention_mask, position_embeddings)
 
             if self.gnn_config.use_original_hidden_states:
-                combined_hidden_states=combined_hidden_states+residual
+                combined_hidden_states = combined_hidden_states + residual
                 if self.gnn_config.use_original_hidden_states_add_attention:
-                    combined_hidden_states=combined_hidden_states #+hidden_states_attention
+                    combined_hidden_states = combined_hidden_states  # +hidden_states_attention
 
             ############ MLP BLOCK with RESIDULAL ##############
-            #TODO: not tested, use with caution
+            # TODO: not tested, use with caution
             residual = combined_hidden_states
             combined_hidden_states = self.post_attention_layernorm(combined_hidden_states)
 
             if self.gnn_config.MLP_type in ['LlamaMLP_HalfwayGIN', 'LlamaMLP_HalfwayGIN_MultiHop', 'LlamaMLP_HalfwayGIN_MultiAggregation']:
                 mlp_out = self.mlp(combined_hidden_states, self_attn_weights)
-            else: #standard
+            else:  # standard
                 mlp_out = self.mlp(combined_hidden_states)
-            
+
             if self.skip_around_MLP:
                 hidden_states = residual + mlp_out
             else:
-                hidden_states =  mlp_out
+                hidden_states = mlp_out
             ############ MLP BLOCK with RESIDULAL ##############
 
-        elif self.gnn_config.gnn_logic == 'after_MLP': #TODO not tested
+        elif self.gnn_config.gnn_logic == 'after_MLP':  # TODO not tested
             # Apply MLP first, then GNN
 
             ############ MLP BLOCK with RESIDULAL ##############
             residual = transformer_hidden_states
             hidden_states = self.post_attention_layernorm(transformer_hidden_states)
             mlp_out = self.mlp(hidden_states)
-            
-            #combined_hidden_states = residual + mlp_out  # Add residual for MLP
+
+            # combined_hidden_states = residual + mlp_out  # Add residual for MLP
             if self.skip_around_MLP:
                 combined_hidden_states = residual + mlp_out  # Add residual for MLP
             else:
@@ -445,7 +452,7 @@ class LlamaDecoderLayerWithGNN(nn.Module):
             combined_hidden_states = self.apply_gnn(combined_hidden_states, adj, attention_mask, position_embeddings)
             hidden_states = combined_hidden_states  # Final hidden states include GNN output
 
-        elif self.gnn_config.gnn_logic == 'parallel_GNN_MLP': #TODO not tested
+        elif self.gnn_config.gnn_logic == 'parallel_GNN_MLP':  # TODO not tested
             # Initial Layer Norm and Residual for MLP
             residual_mlp = transformer_hidden_states
             hidden_states_mlp = self.post_attention_layernorm(transformer_hidden_states)
@@ -478,10 +485,10 @@ class LlamaDecoderLayerWithGNN(nn.Module):
 
     def construct_adjacency(self, attn_weights, attention_mask=None, additional_adj=None, input_ids=None):
 
-        #if GNN is not used, no processing needed
+        # if GNN is not used, no processing needed
         if self.gnn_mode == 'none':
             return None
-        
+
         method = self.gnn_config.adj_construction_method
         batch_size, num_heads, seq_len, _ = attn_weights.size()
 
@@ -500,7 +507,7 @@ class LlamaDecoderLayerWithGNN(nn.Module):
                 adj = soft_mask.max(dim=1)[0]
             else:
                 raise ValueError(f"Unknown adj_construction_method: {method}")
-            
+
         elif self.gnn_mode == 'per_head':
             if method in ['mean', 'sum']:
                 adj = attn_weights  # [batch_size, num_heads, seq_len, seq_len]
@@ -581,8 +588,8 @@ class LlamaDecoderLayerWithGNN(nn.Module):
         if additional_adj is not None:
             if additional_adj.shape != expected_dims:
                 raise ValueError(f"Expected additional_adj to have dimensions {expected_dims} but got {additional_adj.shape}")
-            
-            #TODO check if clamping works, may need other measures
+
+            # TODO check if clamping works, may need other measures
             adj += additional_adj.clamp(max=1.0)
 
         # Debugging plot for adjacency
@@ -649,7 +656,7 @@ class LlamaDecoderLayerWithGNN(nn.Module):
 
                 plt.tight_layout(rect=[0, 0.03, 1, 0.95])
                 plt.show()
-       
+
         return adj
 
     def apply_gnn(self, hidden_states, adj, attention_mask, position_embeddings):
@@ -659,11 +666,10 @@ class LlamaDecoderLayerWithGNN(nn.Module):
             return self._apply_per_head_gnn(hidden_states, adj, attention_mask, position_embeddings)
         elif self.gnn_mode == 'none':
             return hidden_states
-        
 
     def _apply_single_gnn(self, hidden_states, adj, attention_mask, position_embeddings):
         batch_size, seq_len, hidden_dim = hidden_states.size()
-        residual=hidden_states
+        residual = hidden_states
 
         data_list = []
         for batch_idx in range(batch_size):
@@ -675,7 +681,6 @@ class LlamaDecoderLayerWithGNN(nn.Module):
 
             data = Data(x=x, edge_index=edge_indices, edge_weight=edge_weights)
             data_list.append(data)
-
 
         batch = Batch.from_data_list(data_list).to(hidden_states.device)
 
